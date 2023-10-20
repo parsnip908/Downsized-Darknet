@@ -32,10 +32,6 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    gpu_index = find_int_arg(argc, argv, "-i", 0);
-
-    gpu_index = -1;
-    printf(" GPU isn't used \n");
     init_cpu();
 
     float thresh = find_float_arg(argc, argv, "-thresh", .24);

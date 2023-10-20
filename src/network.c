@@ -321,143 +321,143 @@ void backward_network(network net, network_state state)
     }
 }
 
-float train_network_datum(network net, float *x, float *y)
-{
-#ifdef GPU
-    if(gpu_index >= 0) return train_network_datum_gpu(net, x, y);
-#endif
-    network_state state={0};
-    *net.seen += net.batch;
-    state.index = 0;
-    state.net = net;
-    state.input = x;
-    state.delta = 0;
-    state.truth = y;
-    state.train = 1;
-    forward_network(net, state);
-    backward_network(net, state);
-    float error = get_network_cost(net);
-    //if(((*net.seen)/net.batch)%net.subdivisions == 0) update_network(net);
-    if(*(state.net.total_bbox) > 0)
-        fprintf(stderr, " total_bbox = %d, rewritten_bbox = %f %% \n", *(state.net.total_bbox), 100 * (float)*(state.net.rewritten_bbox) / *(state.net.total_bbox));
-    return error;
-}
+// float train_network_datum(network net, float *x, float *y)
+// {
+// #ifdef GPU
+//     if(gpu_index >= 0) return train_network_datum_gpu(net, x, y);
+// #endif
+//     network_state state={0};
+//     *net.seen += net.batch;
+//     state.index = 0;
+//     state.net = net;
+//     state.input = x;
+//     state.delta = 0;
+//     state.truth = y;
+//     state.train = 1;
+//     forward_network(net, state);
+//     backward_network(net, state);
+//     float error = get_network_cost(net);
+//     //if(((*net.seen)/net.batch)%net.subdivisions == 0) update_network(net);
+//     if(*(state.net.total_bbox) > 0)
+//         fprintf(stderr, " total_bbox = %d, rewritten_bbox = %f %% \n", *(state.net.total_bbox), 100 * (float)*(state.net.rewritten_bbox) / *(state.net.total_bbox));
+//     return error;
+// }
 
-float train_network_sgd(network net, data d, int n)
-{
-    int batch = net.batch;
-    float* X = (float*)xcalloc(batch * d.X.cols, sizeof(float));
-    float* y = (float*)xcalloc(batch * d.y.cols, sizeof(float));
+// float train_network_sgd(network net, data d, int n)
+// {
+//     int batch = net.batch;
+//     float* X = (float*)xcalloc(batch * d.X.cols, sizeof(float));
+//     float* y = (float*)xcalloc(batch * d.y.cols, sizeof(float));
 
-    int i;
-    float sum = 0;
-    for(i = 0; i < n; ++i){
-        get_random_batch(d, batch, X, y);
-        net.current_subdivision = i;
-        float err = train_network_datum(net, X, y);
-        sum += err;
-    }
-    free(X);
-    free(y);
-    return (float)sum/(n*batch);
-}
+//     int i;
+//     float sum = 0;
+//     for(i = 0; i < n; ++i){
+//         get_random_batch(d, batch, X, y);
+//         net.current_subdivision = i;
+//         float err = train_network_datum(net, X, y);
+//         sum += err;
+//     }
+//     free(X);
+//     free(y);
+//     return (float)sum/(n*batch);
+// }
 
-float train_network(network net, data d)
-{
-    return train_network_waitkey(net, d, 0);
-}
+// float train_network(network net, data d)
+// {
+//     return train_network_waitkey(net, d, 0);
+// }
 
-float train_network_waitkey(network net, data d, int wait_key)
-{
-    assert(d.X.rows % net.batch == 0);
-    int batch = net.batch;
-    int n = d.X.rows / batch;
-    float* X = (float*)xcalloc(batch * d.X.cols, sizeof(float));
-    float* y = (float*)xcalloc(batch * d.y.cols, sizeof(float));
+// float train_network_waitkey(network net, data d, int wait_key)
+// {
+//     assert(d.X.rows % net.batch == 0);
+//     int batch = net.batch;
+//     int n = d.X.rows / batch;
+//     float* X = (float*)xcalloc(batch * d.X.cols, sizeof(float));
+//     float* y = (float*)xcalloc(batch * d.y.cols, sizeof(float));
 
-    int i;
-    float sum = 0;
-    for(i = 0; i < n; ++i){
-        get_next_batch(d, batch, i*batch, X, y);
-        net.current_subdivision = i;
-        float err = train_network_datum(net, X, y);
-        sum += err;
-        if(wait_key) wait_key_cv(5);
-    }
-    (*net.cur_iteration) += 1;
-#ifdef GPU
-    update_network_gpu(net);
-#else   // GPU
-    update_network(net);
-#endif  // GPU
+//     int i;
+//     float sum = 0;
+//     for(i = 0; i < n; ++i){
+//         get_next_batch(d, batch, i*batch, X, y);
+//         net.current_subdivision = i;
+//         float err = train_network_datum(net, X, y);
+//         sum += err;
+//         if(wait_key) wait_key_cv(5);
+//     }
+//     (*net.cur_iteration) += 1;
+// #ifdef GPU
+//     update_network_gpu(net);
+// #else   // GPU
+//     update_network(net);
+// #endif  // GPU
 
-    int ema_start_point = net.max_batches / 2;
+//     int ema_start_point = net.max_batches / 2;
 
-    if (net.ema_alpha && (*net.cur_iteration) >= ema_start_point)
-    {
-        int ema_period = (net.max_batches - ema_start_point - 1000) * (1.0 - net.ema_alpha);
-        int ema_apply_point = net.max_batches - 1000;
+//     if (net.ema_alpha && (*net.cur_iteration) >= ema_start_point)
+//     {
+//         int ema_period = (net.max_batches - ema_start_point - 1000) * (1.0 - net.ema_alpha);
+//         int ema_apply_point = net.max_batches - 1000;
 
-        if (!is_ema_initialized(net))
-        {
-            ema_update(net, 0); // init EMA
-            printf(" EMA initialization \n");
-        }
+//         if (!is_ema_initialized(net))
+//         {
+//             ema_update(net, 0); // init EMA
+//             printf(" EMA initialization \n");
+//         }
 
-        if ((*net.cur_iteration) == ema_apply_point)
-        {
-            ema_apply(net); // apply EMA (BN rolling mean/var recalculation is required)
-            printf(" ema_apply() \n");
-        }
-        else
-        if ((*net.cur_iteration) < ema_apply_point)// && (*net.cur_iteration) % ema_period == 0)
-        {
-            ema_update(net, net.ema_alpha); // update EMA
-            printf(" ema_update(), ema_alpha = %f \n", net.ema_alpha);
-        }
-    }
-
-
-    int reject_stop_point = net.max_batches*3/4;
-
-    if ((*net.cur_iteration) < reject_stop_point &&
-        net.weights_reject_freq &&
-        (*net.cur_iteration) % net.weights_reject_freq == 0)
-    {
-        float sim_threshold = 0.4;
-        reject_similar_weights(net, sim_threshold);
-    }
+//         if ((*net.cur_iteration) == ema_apply_point)
+//         {
+//             ema_apply(net); // apply EMA (BN rolling mean/var recalculation is required)
+//             printf(" ema_apply() \n");
+//         }
+//         else
+//         if ((*net.cur_iteration) < ema_apply_point)// && (*net.cur_iteration) % ema_period == 0)
+//         {
+//             ema_update(net, net.ema_alpha); // update EMA
+//             printf(" ema_update(), ema_alpha = %f \n", net.ema_alpha);
+//         }
+//     }
 
 
-    free(X);
-    free(y);
-    return (float)sum/(n*batch);
-}
+//     int reject_stop_point = net.max_batches*3/4;
+
+//     if ((*net.cur_iteration) < reject_stop_point &&
+//         net.weights_reject_freq &&
+//         (*net.cur_iteration) % net.weights_reject_freq == 0)
+//     {
+//         float sim_threshold = 0.4;
+//         reject_similar_weights(net, sim_threshold);
+//     }
 
 
-float train_network_batch(network net, data d, int n)
-{
-    int i,j;
-    network_state state={0};
-    state.index = 0;
-    state.net = net;
-    state.train = 1;
-    state.delta = 0;
-    float sum = 0;
-    int batch = 2;
-    for(i = 0; i < n; ++i){
-        for(j = 0; j < batch; ++j){
-            int index = random_gen()%d.X.rows;
-            state.input = d.X.vals[index];
-            state.truth = d.y.vals[index];
-            forward_network(net, state);
-            backward_network(net, state);
-            sum += get_network_cost(net);
-        }
-        update_network(net);
-    }
-    return (float)sum/(n*batch);
-}
+//     free(X);
+//     free(y);
+//     return (float)sum/(n*batch);
+// }
+
+
+// float train_network_batch(network net, data d, int n)
+// {
+//     int i,j;
+//     network_state state={0};
+//     state.index = 0;
+//     state.net = net;
+//     state.train = 1;
+//     state.delta = 0;
+//     float sum = 0;
+//     int batch = 2;
+//     for(i = 0; i < n; ++i){
+//         for(j = 0; j < batch; ++j){
+//             int index = random_gen()%d.X.rows;
+//             state.input = d.X.vals[index];
+//             state.truth = d.y.vals[index];
+//             forward_network(net, state);
+//             backward_network(net, state);
+//             sum += get_network_cost(net);
+//         }
+//         update_network(net);
+//     }
+//     return (float)sum/(n*batch);
+// }
 
 int recalculate_workspace_size(network *net)
 {
@@ -472,9 +472,6 @@ int recalculate_workspace_size(network *net)
         //printf(" %d: layer = %d,", i, l.type);
         if (l.type == CONVOLUTIONAL) {
             l.workspace_size = get_convolutional_workspace_size(l);
-        }
-        else if (l.type == CONNECTED) {
-            l.workspace_size = get_connected_workspace_size(l);
         }
         if (l.workspace_size > workspace_size) workspace_size = l.workspace_size;
         net->layers[i] = l;
@@ -504,40 +501,12 @@ void set_batch_network(network *net, int b)
     int i;
     for(i = 0; i < net->n; ++i){
         net->layers[i].batch = b;
-
-#ifdef CUDNN
-        if(net->layers[i].type == CONVOLUTIONAL){
-            cudnn_convolutional_setup(net->layers + i, cudnn_fastest, 0);
-        }
-        else if (net->layers[i].type == MAXPOOL) {
-            cudnn_maxpool_setup(net->layers + i);
-        }
-#endif
-
     }
     recalculate_workspace_size(net); // recalculate workspace size
 }
 
 int resize_network(network *net, int w, int h)
 {
-#ifdef GPU
-    cuda_set_device(net->gpu_index);
-    if(gpu_index >= 0){
-        cuda_free(net->workspace);
-        if (net->input_gpu) {
-            cuda_free(*net->input_gpu);
-            *net->input_gpu = 0;
-            cuda_free(*net->truth_gpu);
-            *net->truth_gpu = 0;
-        }
-
-        if (net->input_state_gpu) cuda_free(net->input_state_gpu);
-        if (net->input_pinned_cpu) {
-            if (net->input_pinned_cpu_flag) cudaFreeHost(net->input_pinned_cpu);
-            else free(net->input_pinned_cpu);
-        }
-    }
-#endif
     int i;
     //if(w == net->w && h == net->h) return 0;
     net->w = w;
@@ -551,55 +520,12 @@ int resize_network(network *net, int w, int h)
         //printf(" (resize %d: layer = %d) , ", i, l.type);
         if(l.type == CONVOLUTIONAL){
             resize_convolutional_layer(&l, w, h);
-        }
-        else if (l.type == CRNN) {
-            resize_crnn_layer(&l, w, h);
-        }else if (l.type == CONV_LSTM) {
-            resize_conv_lstm_layer(&l, w, h);
-        }else if(l.type == CROP){
-            resize_crop_layer(&l, w, h);
         }else if(l.type == MAXPOOL){
             resize_maxpool_layer(&l, w, h);
-        }else if (l.type == LOCAL_AVGPOOL) {
-            resize_maxpool_layer(&l, w, h);
-        }else if (l.type == BATCHNORM) {
-            resize_batchnorm_layer(&l, w, h);
-        }else if(l.type == REGION){
-            resize_region_layer(&l, w, h);
         }else if (l.type == YOLO) {
             resize_yolo_layer(&l, w, h);
-        }else if (l.type == GAUSSIAN_YOLO) {
-            resize_gaussian_yolo_layer(&l, w, h);
         }else if(l.type == ROUTE){
             resize_route_layer(&l, net);
-        }else if (l.type == SHORTCUT) {
-            resize_shortcut_layer(&l, w, h, net);
-        }else if (l.type == SCALE_CHANNELS) {
-            resize_scale_channels_layer(&l, net);
-        }else if (l.type == SAM) {
-            resize_sam_layer(&l, w, h);
-        }else if (l.type == DROPOUT) {
-            resize_dropout_layer(&l, inputs);
-            l.out_w = l.w = w;
-            l.out_h = l.h = h;
-            l.output = net->layers[i - 1].output;
-            l.delta = net->layers[i - 1].delta;
-#ifdef GPU
-            l.output_gpu = net->layers[i-1].output_gpu;
-            l.delta_gpu = net->layers[i-1].delta_gpu;
-#endif
-        }else if (l.type == UPSAMPLE) {
-            resize_upsample_layer(&l, w, h);
-        }else if(l.type == REORG){
-            resize_reorg_layer(&l, w, h);
-        } else if (l.type == REORG_OLD) {
-            resize_reorg_old_layer(&l, w, h);
-        }else if(l.type == AVGPOOL){
-            resize_avgpool_layer(&l, w, h);
-        }else if(l.type == NORMALIZATION){
-            resize_normalization_layer(&l, w, h);
-        }else if(l.type == COST){
-            resize_cost_layer(&l, inputs);
         }else{
             fprintf(stderr, "Resizing type %d \n", (int)l.type);
             error("Cannot resize this type of layer", DARKNET_LOC);
@@ -614,30 +540,9 @@ int resize_network(network *net, int w, int h)
         }
         //if(l.type == AVGPOOL) break;
     }
-#ifdef GPU
-    const int size = get_network_input_size(*net) * net->batch;
-    if(gpu_index >= 0){
-        printf(" try to allocate additional workspace_size = %1.2f MB \n", (float)workspace_size / 1000000);
-        net->workspace = cuda_make_array(0, workspace_size/sizeof(float) + 1);
-        net->input_state_gpu = cuda_make_array(0, size);
-        if (cudaSuccess == cudaHostAlloc(&net->input_pinned_cpu, size * sizeof(float), cudaHostRegisterMapped))
-            net->input_pinned_cpu_flag = 1;
-        else {
-            cudaGetLastError(); // reset CUDA-error
-            net->input_pinned_cpu = (float*)xcalloc(size, sizeof(float));
-            net->input_pinned_cpu_flag = 0;
-        }
-        printf(" CUDA allocate done! \n");
-    }else {
-        free(net->workspace);
-        net->workspace = (float*)xcalloc(1, workspace_size);
-        if(!net->input_pinned_cpu_flag)
-            net->input_pinned_cpu = (float*)xrealloc(net->input_pinned_cpu, size * sizeof(float));
-    }
-#else
+
     free(net->workspace);
     net->workspace = (float*)xcalloc(1, workspace_size);
-#endif
     //fprintf(stderr, " Done!\n");
     return 0;
 }
@@ -731,12 +636,12 @@ int num_detections(network *net, float thresh)
         if (l.type == YOLO) {
             s += yolo_num_detections(l, thresh);
         }
-        if (l.type == GAUSSIAN_YOLO) {
-            s += gaussian_yolo_num_detections(l, thresh);
-        }
-        if (l.type == DETECTION || l.type == REGION) {
-            s += l.w*l.h*l.n;
-        }
+        // if (l.type == GAUSSIAN_YOLO) {
+        //     s += gaussian_yolo_num_detections(l, thresh);
+        // }
+        // if (l.type == DETECTION || l.type == REGION) {
+        //     s += l.w*l.h*l.n;
+        // }
     }
     return s;
 }
@@ -820,34 +725,34 @@ detection *make_network_boxes_batch(network *net, float thresh, int *num, int ba
     return dets;
 }
 
-void custom_get_region_detections(layer l, int w, int h, int net_w, int net_h, float thresh, int *map, float hier, int relative, detection *dets, int letter)
-{
-    box* boxes = (box*)xcalloc(l.w * l.h * l.n, sizeof(box));
-    float** probs = (float**)xcalloc(l.w * l.h * l.n, sizeof(float*));
-    int i, j;
-    for (j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float*)xcalloc(l.classes, sizeof(float));
-    get_region_boxes(l, 1, 1, thresh, probs, boxes, 0, map);
-    for (j = 0; j < l.w*l.h*l.n; ++j) {
-        dets[j].classes = l.classes;
-        dets[j].bbox = boxes[j];
-        dets[j].objectness = 1;
-        float highest_prob = 0;
-        dets[j].best_class_idx = -1;
-        for (i = 0; i < l.classes; ++i) {
-            if (probs[j][i] > highest_prob) {
-                highest_prob = probs[j][i];
-                dets[j].best_class_idx = i;
-            }
-            dets[j].prob[i] = probs[j][i];
-        }
-    }
+// void custom_get_region_detections(layer l, int w, int h, int net_w, int net_h, float thresh, int *map, float hier, int relative, detection *dets, int letter)
+// {
+//     box* boxes = (box*)xcalloc(l.w * l.h * l.n, sizeof(box));
+//     float** probs = (float**)xcalloc(l.w * l.h * l.n, sizeof(float*));
+//     int i, j;
+//     for (j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float*)xcalloc(l.classes, sizeof(float));
+//     get_region_boxes(l, 1, 1, thresh, probs, boxes, 0, map);
+//     for (j = 0; j < l.w*l.h*l.n; ++j) {
+//         dets[j].classes = l.classes;
+//         dets[j].bbox = boxes[j];
+//         dets[j].objectness = 1;
+//         float highest_prob = 0;
+//         dets[j].best_class_idx = -1;
+//         for (i = 0; i < l.classes; ++i) {
+//             if (probs[j][i] > highest_prob) {
+//                 highest_prob = probs[j][i];
+//                 dets[j].best_class_idx = i;
+//             }
+//             dets[j].prob[i] = probs[j][i];
+//         }
+//     }
 
-    free(boxes);
-    free_ptrs((void **)probs, l.w*l.h*l.n);
+//     free(boxes);
+//     free_ptrs((void **)probs, l.w*l.h*l.n);
 
-    //correct_region_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative);
-    correct_yolo_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative, letter);
-}
+//     //correct_region_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative);
+//     correct_yolo_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative, letter);
+// }
 
 void fill_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, detection *dets, int letter)
 {
@@ -863,19 +768,6 @@ void fill_network_boxes(network *net, int w, int h, float thresh, float hier, in
                 printf(" Error: Different [yolo] layers have different number of classes = %d and %d - check your cfg-file! \n",
                     prev_classes, l.classes);
             }
-        }
-        if (l.type == GAUSSIAN_YOLO) {
-            int count = get_gaussian_yolo_detections(l, w, h, net->w, net->h, thresh, map, relative, dets, letter);
-            dets += count;
-        }
-        if (l.type == REGION) {
-            custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
-            //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
-            dets += l.w*l.h*l.n;
-        }
-        if (l.type == DETECTION) {
-            get_detection_detections(l, w, h, thresh, dets);
-            dets += l.w*l.h*l.n;
         }
     }
 }
@@ -894,15 +786,6 @@ void fill_network_boxes_batch(network *net, int w, int h, float thresh, float hi
                 printf(" Error: Different [yolo] layers have different number of classes = %d and %d - check your cfg-file! \n",
                     prev_classes, l.classes);
             }
-        }
-        if (l.type == REGION) {
-            custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
-            //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
-            dets += l.w*l.h*l.n;
-        }
-        if (l.type == DETECTION) {
-            get_detection_detections(l, w, h, thresh, dets);
-            dets += l.w*l.h*l.n;
         }
     }
 }
@@ -1174,7 +1057,6 @@ void free_network(network net)
         free_layer(net.layers[i]);
     }
     free(net.layers);
-
     free(net.seq_scales);
     free(net.scales);
     free(net.steps);
@@ -1309,21 +1191,6 @@ void calculate_binary_weights(network net)
                 if (net.layers[j].use_bin_output) {
                     l->activation = LINEAR;
                 }
-
-#ifdef GPU
-                // fuse conv_xnor + shortcut -> conv_xnor
-                if ((j + 1) < net.n && net.layers[j].type == CONVOLUTIONAL) {
-                    layer *sc = &net.layers[j + 1];
-                    if (sc->type == SHORTCUT && sc->w == sc->out_w && sc->h == sc->out_h && sc->c == sc->out_c)
-                    {
-                        l->bin_conv_shortcut_in_gpu = net.layers[net.layers[j + 1].index].output_gpu;
-                        l->bin_conv_shortcut_out_gpu = net.layers[j + 1].output_gpu;
-
-                        net.layers[j + 1].type = BLANK;
-                        net.layers[j + 1].forward_gpu = forward_blank_layer;
-                    }
-                }
-#endif  // GPU
             }
         }
     }
@@ -1331,57 +1198,42 @@ void calculate_binary_weights(network net)
 
 }
 
-void copy_cudnn_descriptors(layer src, layer *dst)
-{
-#ifdef CUDNN
-    dst->normTensorDesc = src.normTensorDesc;
-    dst->normDstTensorDesc = src.normDstTensorDesc;
-    dst->normDstTensorDescF16 = src.normDstTensorDescF16;
+// void copy_weights_net(network net_train, network *net_map)
+// {
+//     int k;
+//     for (k = 0; k < net_train.n; ++k) {
+//         layer *l = &(net_train.layers[k]);
+//         layer tmp_layer;
+//         copy_cudnn_descriptors(net_map->layers[k], &tmp_layer);
+//         net_map->layers[k] = net_train.layers[k];
+//         copy_cudnn_descriptors(tmp_layer, &net_map->layers[k]);
 
-    dst->srcTensorDesc = src.srcTensorDesc;
-    dst->dstTensorDesc = src.dstTensorDesc;
+//         if (l->type == CRNN) {
+//             layer tmp_input_layer, tmp_self_layer, tmp_output_layer;
+//             copy_cudnn_descriptors(*net_map->layers[k].input_layer, &tmp_input_layer);
+//             copy_cudnn_descriptors(*net_map->layers[k].self_layer, &tmp_self_layer);
+//             copy_cudnn_descriptors(*net_map->layers[k].output_layer, &tmp_output_layer);
+//             net_map->layers[k].input_layer = net_train.layers[k].input_layer;
+//             net_map->layers[k].self_layer = net_train.layers[k].self_layer;
+//             net_map->layers[k].output_layer = net_train.layers[k].output_layer;
+//             //net_map->layers[k].output_gpu = net_map->layers[k].output_layer->output_gpu;  // already copied out of if()
 
-    dst->srcTensorDesc16 = src.srcTensorDesc16;
-    dst->dstTensorDesc16 = src.dstTensorDesc16;
-#endif // CUDNN
-}
-
-void copy_weights_net(network net_train, network *net_map)
-{
-    int k;
-    for (k = 0; k < net_train.n; ++k) {
-        layer *l = &(net_train.layers[k]);
-        layer tmp_layer;
-        copy_cudnn_descriptors(net_map->layers[k], &tmp_layer);
-        net_map->layers[k] = net_train.layers[k];
-        copy_cudnn_descriptors(tmp_layer, &net_map->layers[k]);
-
-        if (l->type == CRNN) {
-            layer tmp_input_layer, tmp_self_layer, tmp_output_layer;
-            copy_cudnn_descriptors(*net_map->layers[k].input_layer, &tmp_input_layer);
-            copy_cudnn_descriptors(*net_map->layers[k].self_layer, &tmp_self_layer);
-            copy_cudnn_descriptors(*net_map->layers[k].output_layer, &tmp_output_layer);
-            net_map->layers[k].input_layer = net_train.layers[k].input_layer;
-            net_map->layers[k].self_layer = net_train.layers[k].self_layer;
-            net_map->layers[k].output_layer = net_train.layers[k].output_layer;
-            //net_map->layers[k].output_gpu = net_map->layers[k].output_layer->output_gpu;  // already copied out of if()
-
-            copy_cudnn_descriptors(tmp_input_layer, net_map->layers[k].input_layer);
-            copy_cudnn_descriptors(tmp_self_layer, net_map->layers[k].self_layer);
-            copy_cudnn_descriptors(tmp_output_layer, net_map->layers[k].output_layer);
-        }
-        else if(l->input_layer) // for AntiAliasing
-        {
-            layer tmp_input_layer;
-            copy_cudnn_descriptors(*net_map->layers[k].input_layer, &tmp_input_layer);
-            net_map->layers[k].input_layer = net_train.layers[k].input_layer;
-            copy_cudnn_descriptors(tmp_input_layer, net_map->layers[k].input_layer);
-        }
-        net_map->layers[k].batch = 1;
-        net_map->layers[k].steps = 1;
-        net_map->layers[k].train = 0;
-    }
-}
+//             copy_cudnn_descriptors(tmp_input_layer, net_map->layers[k].input_layer);
+//             copy_cudnn_descriptors(tmp_self_layer, net_map->layers[k].self_layer);
+//             copy_cudnn_descriptors(tmp_output_layer, net_map->layers[k].output_layer);
+//         }
+//         else if(l->input_layer) // for AntiAliasing
+//         {
+//             layer tmp_input_layer;
+//             copy_cudnn_descriptors(*net_map->layers[k].input_layer, &tmp_input_layer);
+//             net_map->layers[k].input_layer = net_train.layers[k].input_layer;
+//             copy_cudnn_descriptors(tmp_input_layer, net_map->layers[k].input_layer);
+//         }
+//         net_map->layers[k].batch = 1;
+//         net_map->layers[k].steps = 1;
+//         net_map->layers[k].train = 0;
+//     }
+// }
 
 
 // combine Training and Validation networks
@@ -1416,42 +1268,42 @@ network combine_train_valid_networks(network net_train, network net_map)
     return net_combined;
 }
 
-void free_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) free_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void free_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) free_state_conv_lstm(net.layers[k]);
+//         if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
-void randomize_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) randomize_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void randomize_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) randomize_state_conv_lstm(net.layers[k]);
+//         if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
 
-void remember_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) remember_state_conv_lstm(net.layers[k]);
-        //if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void remember_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) remember_state_conv_lstm(net.layers[k]);
+//         //if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
-void restore_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) restore_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void restore_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) restore_state_conv_lstm(net.layers[k]);
+//         if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
 
 int is_ema_initialized(network net)
@@ -1539,11 +1391,6 @@ void reject_similar_weights(network net, float sim_threshold)
         if (net.n > i + 3) if (net.layers[i + 3].type == YOLO) continue;
 
         if (l.type == CONVOLUTIONAL && l.activation != LINEAR) {
-#ifdef GPU
-            if (gpu_index >= 0) {
-                pull_convolutional_layer(l);
-            }
-#endif
             int k, j;
             float max_sim = -1000;
             int max_sim_index = 0;

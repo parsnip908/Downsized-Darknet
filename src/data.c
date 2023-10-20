@@ -577,13 +577,15 @@ char **get_labels(char *filename)
 
 void free_data(data d)
 {
-    if(!d.shallow){
-        free_matrix(d.X);
-        free_matrix(d.y);
-    }else{
-        free(d.X.vals);
-        free(d.y.vals);
-    }
+    free(d.X.vals);
+    free(d.y.vals);
+    // if(!d.shallow){
+    //     free_matrix(d.X);
+    //     free_matrix(d.y);
+    // }else{
+    //     free(d.X.vals);
+    //     free(d.y.vals);
+    // }
 }
 
 
@@ -979,14 +981,7 @@ void *load_thread(void *ptr)
     if(a.saturation == 0) a.saturation = 1;
     if(a.aspect == 0) a.aspect = 1;
 
-    if (a.type == OLD_CLASSIFICATION_DATA){
-        *a.d = load_data_old(a.paths, a.n, a.m, a.labels, a.classes, a.w, a.h);
-    } else if (a.type == CLASSIFICATION_DATA){
-        *a.d = load_data_augment(a.paths, a.n, a.m, a.labels, a.classes, a.hierarchy, a.flip, a.min, a.max, a.w, a.h, a.angle, a.aspect, a.hue, a.saturation, a.exposure, a.mixup, a.blur, a.show_imgs, a.label_smooth_eps, a.dontuse_opencv, a.contrastive);
-    } else if (a.type == DETECTION_DATA){
-        *a.d = load_data_detection(a.n, a.paths, a.m, a.w, a.h, a.c, a.num_boxes, a.truth_size, a.classes, a.flip, a.gaussian_noise, a.blur, a.mixup, a.jitter, a.resize,
-            a.hue, a.saturation, a.exposure, a.mini_batch, a.track, a.augment_speed, a.letter_box, a.mosaic_bound, a.contrastive, a.contrastive_jit_flip, a.contrastive_color, a.show_imgs);
-    } else if (a.type == IMAGE_DATA){
+    if (a.type == IMAGE_DATA){
         *(a.im) = load_image(a.path, 0, 0, a.c);
         *(a.resized) = resize_image(*(a.im), a.w, a.h);
     }else if (a.type == LETTERBOX_DATA) {
