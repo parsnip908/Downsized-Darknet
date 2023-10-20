@@ -248,30 +248,6 @@ convolutional_layer parse_convolutional(list *options, size_params params)
     return layer;
 }
 
-layer parse_crnn(list *options, size_params params)
-{
-    int size = option_find_int_quiet(options, "size", 3);
-    int stride = option_find_int_quiet(options, "stride", 1);
-    int dilation = option_find_int_quiet(options, "dilation", 1);
-    int pad = option_find_int_quiet(options, "pad", 0);
-    int padding = option_find_int_quiet(options, "padding", 0);
-    if (pad) padding = size / 2;
-
-    int output_filters = option_find_int(options, "output",1);
-    int hidden_filters = option_find_int(options, "hidden",1);
-    int groups = option_find_int_quiet(options, "groups", 1);
-    char *activation_s = option_find_str(options, "activation", "logistic");
-    ACTIVATION activation = get_activation(activation_s);
-    int batch_normalize = option_find_int_quiet(options, "batch_normalize", 0);
-    int xnor = option_find_int_quiet(options, "xnor", 0);
-
-    layer l = make_crnn_layer(params.batch, params.h, params.w, params.c, hidden_filters, output_filters, groups, params.time_steps, size, stride, dilation, padding, activation, batch_normalize, xnor, params.train);
-
-    l.shortcut = option_find_int_quiet(options, "shortcut", 0);
-
-    return l;
-}
-
 layer parse_rnn(list *options, size_params params)
 {
     int output = option_find_int(options, "output",1);
@@ -305,44 +281,6 @@ layer parse_lstm(list *options, size_params params)
 
     layer l = make_lstm_layer(params.batch, params.inputs, output, params.time_steps, batch_normalize);
 
-    return l;
-}
-
-layer parse_conv_lstm(list *options, size_params params)
-{
-    // a ConvLSTM with a larger transitional kernel should be able to capture faster motions
-    int size = option_find_int_quiet(options, "size", 3);
-    int stride = option_find_int_quiet(options, "stride", 1);
-    int dilation = option_find_int_quiet(options, "dilation", 1);
-    int pad = option_find_int_quiet(options, "pad", 0);
-    int padding = option_find_int_quiet(options, "padding", 0);
-    if (pad) padding = size / 2;
-
-    int output_filters = option_find_int(options, "output", 1);
-    int groups = option_find_int_quiet(options, "groups", 1);
-    char *activation_s = option_find_str(options, "activation", "linear");
-    ACTIVATION activation = get_activation(activation_s);
-    int batch_normalize = option_find_int_quiet(options, "batch_normalize", 0);
-    int xnor = option_find_int_quiet(options, "xnor", 0);
-    int peephole = option_find_int_quiet(options, "peephole", 0);
-    int bottleneck = option_find_int_quiet(options, "bottleneck", 0);
-
-    layer l = make_conv_lstm_layer(params.batch, params.h, params.w, params.c, output_filters, groups, params.time_steps, size, stride, dilation, padding, activation, batch_normalize, peephole, xnor, bottleneck, params.train);
-
-    l.state_constrain = option_find_int_quiet(options, "state_constrain", params.time_steps * 32);
-    l.shortcut = option_find_int_quiet(options, "shortcut", 0);
-
-    char *lstm_activation_s = option_find_str(options, "lstm_activation", "tanh");
-    l.lstm_activation = get_activation(lstm_activation_s);
-    l.time_normalizer = option_find_float_quiet(options, "time_normalizer", 1.0);
-
-    return l;
-}
-
-layer parse_history(list *options, size_params params)
-{
-    int history_size = option_find_int(options, "history_size", 4);
-    layer l = make_history_layer(params.batch, params.h, params.w, params.c, history_size, params.time_steps, params.train);
     return l;
 }
 
@@ -1427,61 +1365,61 @@ network parse_network_cfg_custom(char *filename, int batch, int time_steps)
         LAYER_TYPE lt = string_to_layer_type(s->type);
         if(lt == CONVOLUTIONAL){
             l = parse_convolutional(options, params);
-        }else if(lt == LOCAL){
-            l = parse_local(options, params);
-        }else if(lt == ACTIVE){
-            l = parse_activation(options, params);
-        }else if(lt == RNN){
-            l = parse_rnn(options, params);
-        }else if(lt == GRU){
-            l = parse_gru(options, params);
-        }else if(lt == LSTM){
-            l = parse_lstm(options, params);
-        }else if (lt == CONV_LSTM) {
-            l = parse_conv_lstm(options, params);
-        }else if (lt == HISTORY) {
-            l = parse_history(options, params);
-        }else if(lt == CRNN){
-            l = parse_crnn(options, params);
-        }else if(lt == CONNECTED){
-            l = parse_connected(options, params);
-        }else if(lt == CROP){
-            l = parse_crop(options, params);
-        }else if(lt == COST){
-            l = parse_cost(options, params);
-            l.keep_delta_gpu = 1;
-        }else if(lt == REGION){
-            l = parse_region(options, params);
-            l.keep_delta_gpu = 1;
+        // }else if(lt == LOCAL){
+        //     l = parse_local(options, params);
+        // }else if(lt == ACTIVE){
+        //     l = parse_activation(options, params);
+        // }else if(lt == RNN){
+        //     l = parse_rnn(options, params);
+        // }else if(lt == GRU){
+        //     l = parse_gru(options, params);
+        // }else if(lt == LSTM){
+        //     l = parse_lstm(options, params);
+        // }else if (lt == CONV_LSTM) {
+        //     l = parse_conv_lstm(options, params);
+        // }else if (lt == HISTORY) {
+        //     l = parse_history(options, params);
+        // }else if(lt == CRNN){
+        //     l = parse_crnn(options, params);
+        // }else if(lt == CONNECTED){
+        //     l = parse_connected(options, params);
+        // }else if(lt == CROP){
+        //     l = parse_crop(options, params);
+        // }else if(lt == COST){
+        //     l = parse_cost(options, params);
+        //     l.keep_delta_gpu = 1;
+        // }else if(lt == REGION){
+        //     l = parse_region(options, params);
+        //     l.keep_delta_gpu = 1;
         }else if (lt == YOLO) {
             l = parse_yolo(options, params);
             l.keep_delta_gpu = 1;
         }else if (lt == GAUSSIAN_YOLO) {
             l = parse_gaussian_yolo(options, params);
             l.keep_delta_gpu = 1;
-        }else if(lt == DETECTION){
-            l = parse_detection(options, params);
-        }else if(lt == SOFTMAX){
-            l = parse_softmax(options, params);
-            net.hierarchy = l.softmax_tree;
-            l.keep_delta_gpu = 1;
-        }else if (lt == CONTRASTIVE) {
-            l = parse_contrastive(options, params);
-            l.keep_delta_gpu = 1;
-        }else if(lt == NORMALIZATION){
-            l = parse_normalization(options, params);
-        }else if(lt == BATCHNORM){
-            l = parse_batchnorm(options, params);
+        // }else if(lt == DETECTION){
+        //     l = parse_detection(options, params);
+        // }else if(lt == SOFTMAX){
+        //     l = parse_softmax(options, params);
+        //     net.hierarchy = l.softmax_tree;
+        //     l.keep_delta_gpu = 1;
+        // }else if (lt == CONTRASTIVE) {
+        //     l = parse_contrastive(options, params);
+        //     l.keep_delta_gpu = 1;
+        // }else if(lt == NORMALIZATION){
+        //     l = parse_normalization(options, params);
+        // }else if(lt == BATCHNORM){
+        //     l = parse_batchnorm(options, params);
         }else if(lt == MAXPOOL){
             l = parse_maxpool(options, params);
-        }else if (lt == LOCAL_AVGPOOL) {
-            l = parse_local_avgpool(options, params);
-        }else if(lt == REORG){
-            l = parse_reorg(options, params);        }
-        else if (lt == REORG_OLD) {
-            l = parse_reorg_old(options, params);
-        }else if(lt == AVGPOOL){
-            l = parse_avgpool(options, params);
+//         }else if (lt == LOCAL_AVGPOOL) {
+//             l = parse_local_avgpool(options, params);
+//         }else if(lt == REORG){
+//             l = parse_reorg(options, params);        }
+//         else if (lt == REORG_OLD) {
+//             l = parse_reorg_old(options, params);
+//         }else if(lt == AVGPOOL){
+//             l = parse_avgpool(options, params);
         }else if(lt == ROUTE){
             l = parse_route(options, params);
             int k;
@@ -1492,56 +1430,56 @@ network parse_network_cfg_custom(char *filename, int batch, int time_steps)
             }
         }else if (lt == UPSAMPLE) {
             l = parse_upsample(options, params, net);
-        }else if(lt == SHORTCUT){
-            l = parse_shortcut(options, params, net);
-            net.layers[count - 1].use_bin_output = 0;
-            net.layers[l.index].use_bin_output = 0;
-            if (count >= last_stop_backward)
-                net.layers[l.index].keep_delta_gpu = 1;
-        }else if (lt == SCALE_CHANNELS) {
-            l = parse_scale_channels(options, params, net);
-            net.layers[count - 1].use_bin_output = 0;
-            net.layers[l.index].use_bin_output = 0;
-            net.layers[l.index].keep_delta_gpu = 1;
-        }
-        else if (lt == SAM) {
-            l = parse_sam(options, params, net);
-            net.layers[count - 1].use_bin_output = 0;
-            net.layers[l.index].use_bin_output = 0;
-            net.layers[l.index].keep_delta_gpu = 1;
-        } else if (lt == IMPLICIT) {
-            l = parse_implicit(options, params, net);
-        }else if(lt == DROPOUT){
-            l = parse_dropout(options, params);
-            l.output = net.layers[count-1].output;
-            l.delta = net.layers[count-1].delta;
-#ifdef GPU
-            l.output_gpu = net.layers[count-1].output_gpu;
-            l.delta_gpu = net.layers[count-1].delta_gpu;
-            l.keep_delta_gpu = 1;
-#endif
-        }
-        else if (lt == EMPTY) {
-            layer empty_layer = {(LAYER_TYPE)0};
-            l = empty_layer;
-            l.type = EMPTY;
-            l.w = l.out_w = params.w;
-            l.h = l.out_h = params.h;
-            l.c = l.out_c = params.c;
-            l.batch = params.batch;
-            l.inputs = l.outputs = params.inputs;
-            l.output = net.layers[count - 1].output;
-            l.delta = net.layers[count - 1].delta;
-            l.forward = empty_func;
-            l.backward = empty_func;
-#ifdef GPU
-            l.output_gpu = net.layers[count - 1].output_gpu;
-            l.delta_gpu = net.layers[count - 1].delta_gpu;
-            l.keep_delta_gpu = 1;
-            l.forward_gpu = empty_func;
-            l.backward_gpu = empty_func;
-#endif
-            fprintf(stderr, "empty \n");
+//         }else if(lt == SHORTCUT){
+//             l = parse_shortcut(options, params, net);
+//             net.layers[count - 1].use_bin_output = 0;
+//             net.layers[l.index].use_bin_output = 0;
+//             if (count >= last_stop_backward)
+//                 net.layers[l.index].keep_delta_gpu = 1;
+//         }else if (lt == SCALE_CHANNELS) {
+//             l = parse_scale_channels(options, params, net);
+//             net.layers[count - 1].use_bin_output = 0;
+//             net.layers[l.index].use_bin_output = 0;
+//             net.layers[l.index].keep_delta_gpu = 1;
+//         }
+//         else if (lt == SAM) {
+//             l = parse_sam(options, params, net);
+//             net.layers[count - 1].use_bin_output = 0;
+//             net.layers[l.index].use_bin_output = 0;
+//             net.layers[l.index].keep_delta_gpu = 1;
+//         } else if (lt == IMPLICIT) {
+//             l = parse_implicit(options, params, net);
+//         }else if(lt == DROPOUT){
+//             l = parse_dropout(options, params);
+//             l.output = net.layers[count-1].output;
+//             l.delta = net.layers[count-1].delta;
+// #ifdef GPU
+//             l.output_gpu = net.layers[count-1].output_gpu;
+//             l.delta_gpu = net.layers[count-1].delta_gpu;
+//             l.keep_delta_gpu = 1;
+// #endif
+//         }
+//         else if (lt == EMPTY) {
+//             layer empty_layer = {(LAYER_TYPE)0};
+//             l = empty_layer;
+//             l.type = EMPTY;
+//             l.w = l.out_w = params.w;
+//             l.h = l.out_h = params.h;
+//             l.c = l.out_c = params.c;
+//             l.batch = params.batch;
+//             l.inputs = l.outputs = params.inputs;
+//             l.output = net.layers[count - 1].output;
+//             l.delta = net.layers[count - 1].delta;
+//             l.forward = empty_func;
+//             l.backward = empty_func;
+// #ifdef GPU
+//             l.output_gpu = net.layers[count - 1].output_gpu;
+//             l.delta_gpu = net.layers[count - 1].delta_gpu;
+//             l.keep_delta_gpu = 1;
+//             l.forward_gpu = empty_func;
+//             l.backward_gpu = empty_func;
+// #endif
+//             fprintf(stderr, "empty \n");
         }else{
             fprintf(stderr, "Type not recognized: %s\n", s->type);
         }
@@ -2009,64 +1947,64 @@ void save_weights_upto(network net, char *filename, int cutoff, int save_ema)
             else {
                 save_convolutional_weights(l, fp);
             }
-        } if (l.type == SHORTCUT && l.nweights > 0) {
-            save_shortcut_weights(l, fp);
-        } if (l.type == IMPLICIT) {
-            save_implicit_weights(l, fp);
-        } if(l.type == CONNECTED){
-            save_connected_weights(l, fp);
-        } if(l.type == BATCHNORM){
-            save_batchnorm_weights(l, fp);
-        } if(l.type == RNN){
-            save_connected_weights(*(l.input_layer), fp);
-            save_connected_weights(*(l.self_layer), fp);
-            save_connected_weights(*(l.output_layer), fp);
-        } if(l.type == GRU){
-            save_connected_weights(*(l.input_z_layer), fp);
-            save_connected_weights(*(l.input_r_layer), fp);
-            save_connected_weights(*(l.input_h_layer), fp);
-            save_connected_weights(*(l.state_z_layer), fp);
-            save_connected_weights(*(l.state_r_layer), fp);
-            save_connected_weights(*(l.state_h_layer), fp);
-        } if(l.type == LSTM){
-            save_connected_weights(*(l.wf), fp);
-            save_connected_weights(*(l.wi), fp);
-            save_connected_weights(*(l.wg), fp);
-            save_connected_weights(*(l.wo), fp);
-            save_connected_weights(*(l.uf), fp);
-            save_connected_weights(*(l.ui), fp);
-            save_connected_weights(*(l.ug), fp);
-            save_connected_weights(*(l.uo), fp);
-        } if (l.type == CONV_LSTM) {
-            if (l.peephole) {
-                save_convolutional_weights(*(l.vf), fp);
-                save_convolutional_weights(*(l.vi), fp);
-                save_convolutional_weights(*(l.vo), fp);
-            }
-            save_convolutional_weights(*(l.wf), fp);
-            if (!l.bottleneck) {
-                save_convolutional_weights(*(l.wi), fp);
-                save_convolutional_weights(*(l.wg), fp);
-                save_convolutional_weights(*(l.wo), fp);
-            }
-            save_convolutional_weights(*(l.uf), fp);
-            save_convolutional_weights(*(l.ui), fp);
-            save_convolutional_weights(*(l.ug), fp);
-            save_convolutional_weights(*(l.uo), fp);
-        } if(l.type == CRNN){
-            save_convolutional_weights(*(l.input_layer), fp);
-            save_convolutional_weights(*(l.self_layer), fp);
-            save_convolutional_weights(*(l.output_layer), fp);
-        } if(l.type == LOCAL){
-#ifdef GPU
-            if(gpu_index >= 0){
-                pull_local_layer(l);
-            }
-#endif
-            int locations = l.out_w*l.out_h;
-            int size = l.size*l.size*l.c*l.n*locations;
-            fwrite(l.biases, sizeof(float), l.outputs, fp);
-            fwrite(l.weights, sizeof(float), size, fp);
+//         } if (l.type == SHORTCUT && l.nweights > 0) {
+//             save_shortcut_weights(l, fp);
+//         } if (l.type == IMPLICIT) {
+//             save_implicit_weights(l, fp);
+//         } if(l.type == CONNECTED){
+//             save_connected_weights(l, fp);
+//         } if(l.type == BATCHNORM){
+//             save_batchnorm_weights(l, fp);
+//         } if(l.type == RNN){
+//             save_connected_weights(*(l.input_layer), fp);
+//             save_connected_weights(*(l.self_layer), fp);
+//             save_connected_weights(*(l.output_layer), fp);
+//         } if(l.type == GRU){
+//             save_connected_weights(*(l.input_z_layer), fp);
+//             save_connected_weights(*(l.input_r_layer), fp);
+//             save_connected_weights(*(l.input_h_layer), fp);
+//             save_connected_weights(*(l.state_z_layer), fp);
+//             save_connected_weights(*(l.state_r_layer), fp);
+//             save_connected_weights(*(l.state_h_layer), fp);
+//         } if(l.type == LSTM){
+//             save_connected_weights(*(l.wf), fp);
+//             save_connected_weights(*(l.wi), fp);
+//             save_connected_weights(*(l.wg), fp);
+//             save_connected_weights(*(l.wo), fp);
+//             save_connected_weights(*(l.uf), fp);
+//             save_connected_weights(*(l.ui), fp);
+//             save_connected_weights(*(l.ug), fp);
+//             save_connected_weights(*(l.uo), fp);
+//         } if (l.type == CONV_LSTM) {
+//             if (l.peephole) {
+//                 save_convolutional_weights(*(l.vf), fp);
+//                 save_convolutional_weights(*(l.vi), fp);
+//                 save_convolutional_weights(*(l.vo), fp);
+//             }
+//             save_convolutional_weights(*(l.wf), fp);
+//             if (!l.bottleneck) {
+//                 save_convolutional_weights(*(l.wi), fp);
+//                 save_convolutional_weights(*(l.wg), fp);
+//                 save_convolutional_weights(*(l.wo), fp);
+//             }
+//             save_convolutional_weights(*(l.uf), fp);
+//             save_convolutional_weights(*(l.ui), fp);
+//             save_convolutional_weights(*(l.ug), fp);
+//             save_convolutional_weights(*(l.uo), fp);
+//         } if(l.type == CRNN){
+//             save_convolutional_weights(*(l.input_layer), fp);
+//             save_convolutional_weights(*(l.self_layer), fp);
+//             save_convolutional_weights(*(l.output_layer), fp);
+//         } if(l.type == LOCAL){
+// #ifdef GPU
+//             if(gpu_index >= 0){
+//                 pull_local_layer(l);
+//             }
+// #endif
+//             int locations = l.out_w*l.out_h;
+//             int size = l.size*l.size*l.c*l.n*locations;
+//             fwrite(l.biases, sizeof(float), l.outputs, fp);
+//             fwrite(l.weights, sizeof(float), size, fp);
         }
         fflush(fp);
     }

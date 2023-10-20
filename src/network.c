@@ -68,19 +68,6 @@ int get_current_batch(network net)
     return batch_num;
 }
 
-/*
-void reset_momentum(network net)
-{
-    if (net.momentum == 0) return;
-    net.learning_rate = 0;
-    net.momentum = 0;
-    net.decay = 0;
-    #ifdef GPU
-        //if(net.gpu_index >= 0) update_network_gpu(net);
-    #endif
-}
-*/
-
 void reset_network_state(network *net, int b)
 {
     int i;
@@ -280,13 +267,6 @@ void forward_network(network net, network_state state)
         l.forward(l, state);
         //printf("%d - Predicted in %lf milli-seconds.\n", i, ((double)get_time_point() - time) / 1000);
         state.input = l.output;
-
-        /*
-        float avg_val = 0;
-        int k;
-        for (k = 0; k < l.outputs; ++k) avg_val += l.output[k];
-        printf(" i: %d - avg_val = %f \n", i, avg_val / l.outputs);
-        */
     }
 }
 
@@ -588,55 +568,55 @@ int resize_network(network *net, int w, int h)
         //printf(" (resize %d: layer = %d) , ", i, l.type);
         if(l.type == CONVOLUTIONAL){
             resize_convolutional_layer(&l, w, h);
-        }
-        else if (l.type == CRNN) {
-            resize_crnn_layer(&l, w, h);
-        }else if (l.type == CONV_LSTM) {
-            resize_conv_lstm_layer(&l, w, h);
-        }else if(l.type == CROP){
-            resize_crop_layer(&l, w, h);
+        // }
+        // else if (l.type == CRNN) {
+        //     resize_crnn_layer(&l, w, h);
+        // }else if (l.type == CONV_LSTM) {
+        //     resize_conv_lstm_layer(&l, w, h);
+        // }else if(l.type == CROP){
+        //     resize_crop_layer(&l, w, h);
         }else if(l.type == MAXPOOL){
             resize_maxpool_layer(&l, w, h);
-        }else if (l.type == LOCAL_AVGPOOL) {
-            resize_maxpool_layer(&l, w, h);
-        }else if (l.type == BATCHNORM) {
-            resize_batchnorm_layer(&l, w, h);
-        }else if(l.type == REGION){
-            resize_region_layer(&l, w, h);
+        // }else if (l.type == LOCAL_AVGPOOL) {
+        //     resize_maxpool_layer(&l, w, h);
+        // }else if (l.type == BATCHNORM) {
+        //     resize_batchnorm_layer(&l, w, h);
+        // }else if(l.type == REGION){
+        //     resize_region_layer(&l, w, h);
         }else if (l.type == YOLO) {
             resize_yolo_layer(&l, w, h);
         }else if (l.type == GAUSSIAN_YOLO) {
             resize_gaussian_yolo_layer(&l, w, h);
         }else if(l.type == ROUTE){
             resize_route_layer(&l, net);
-        }else if (l.type == SHORTCUT) {
-            resize_shortcut_layer(&l, w, h, net);
-        }else if (l.type == SCALE_CHANNELS) {
-            resize_scale_channels_layer(&l, net);
-        }else if (l.type == SAM) {
-            resize_sam_layer(&l, w, h);
-        }else if (l.type == DROPOUT) {
-            resize_dropout_layer(&l, inputs);
-            l.out_w = l.w = w;
-            l.out_h = l.h = h;
-            l.output = net->layers[i - 1].output;
-            l.delta = net->layers[i - 1].delta;
-#ifdef GPU
-            l.output_gpu = net->layers[i-1].output_gpu;
-            l.delta_gpu = net->layers[i-1].delta_gpu;
-#endif
+//         }else if (l.type == SHORTCUT) {
+//             resize_shortcut_layer(&l, w, h, net);
+//         }else if (l.type == SCALE_CHANNELS) {
+//             resize_scale_channels_layer(&l, net);
+//         }else if (l.type == SAM) {
+//             resize_sam_layer(&l, w, h);
+//         }else if (l.type == DROPOUT) {
+//             resize_dropout_layer(&l, inputs);
+//             l.out_w = l.w = w;
+//             l.out_h = l.h = h;
+//             l.output = net->layers[i - 1].output;
+//             l.delta = net->layers[i - 1].delta;
+// #ifdef GPU
+//             l.output_gpu = net->layers[i-1].output_gpu;
+//             l.delta_gpu = net->layers[i-1].delta_gpu;
+// #endif
         }else if (l.type == UPSAMPLE) {
             resize_upsample_layer(&l, w, h);
-        }else if(l.type == REORG){
-            resize_reorg_layer(&l, w, h);
-        } else if (l.type == REORG_OLD) {
-            resize_reorg_old_layer(&l, w, h);
-        }else if(l.type == AVGPOOL){
-            resize_avgpool_layer(&l, w, h);
-        }else if(l.type == NORMALIZATION){
-            resize_normalization_layer(&l, w, h);
-        }else if(l.type == COST){
-            resize_cost_layer(&l, inputs);
+//         }else if(l.type == REORG){
+//             resize_reorg_layer(&l, w, h);
+//         } else if (l.type == REORG_OLD) {
+//             resize_reorg_old_layer(&l, w, h);
+//         }else if(l.type == AVGPOOL){
+//             resize_avgpool_layer(&l, w, h);
+//         }else if(l.type == NORMALIZATION){
+//             resize_normalization_layer(&l, w, h);
+//         }else if(l.type == COST){
+//             resize_cost_layer(&l, inputs);
         }else{
             fprintf(stderr, "Resizing type %d \n", (int)l.type);
             error("Cannot resize this type of layer", DARKNET_LOC);
@@ -1516,44 +1496,6 @@ network combine_train_valid_networks(network net_train, network net_map)
     }
     return net_combined;
 }
-
-void free_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) free_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
-
-void randomize_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) randomize_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
-
-
-void remember_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) remember_state_conv_lstm(net.layers[k]);
-        //if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
-
-void restore_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) restore_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
-
 
 int is_ema_initialized(network net)
 {

@@ -589,8 +589,8 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
 #endif  // not GPU
 
     l.forward = forward_convolutional_layer;
-    l.backward = backward_convolutional_layer;
-    l.update = update_convolutional_layer;
+    l.backward = NULL;//backward_convolutional_layer;
+    l.update = NULL;//update_convolutional_layer;
     if(binary){
         l.binary_weights = (float*)xcalloc(l.nweights, sizeof(float));
         l.cweights = (char*)xcalloc(l.nweights, sizeof(char));
@@ -1071,6 +1071,7 @@ void bit_to_float(unsigned char *src, float *dst, size_t size, size_t filters, f
     }
 }
 
+
 void binary_align_weights(convolutional_layer *l)
 {
     int m = l->n;   // (l->n / l->groups)
@@ -1178,7 +1179,7 @@ void binary_align_weights(convolutional_layer *l)
 
     free(align_weights);
 }
-
+/*
 // binary transpose
 size_t binary_transpose_align_input(int k, int n, float *b, char **t_bit_input, size_t ldb_align, int bit_align)
 {
@@ -1199,7 +1200,7 @@ size_t binary_transpose_align_input(int k, int n, float *b, char **t_bit_input, 
 
     return t_intput_size;
 }
-
+*/
 
 void forward_convolutional_layer(convolutional_layer l, network_state state)
 {
@@ -1237,7 +1238,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
             //gemm(0,0,m,n,k,1,a,k,b,n,1,c,n);
             //gemm_nn_custom(m, n, k, 1, a, k, b, n, c, n);
             if (l.xnor && l.align_bit_weights && !state.train && l.stride_x == l.stride_y)
-            {
+            {/*
                 memset(b, 0, l.bit_align*l.size*l.size*l.c * sizeof(float));
 
                 if (l.c % 32 == 0)
@@ -1357,8 +1358,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
                 else if (l.activation == NORM_CHAN_SOFTMAX_MAXVAL) activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 1);
                 else activate_array_cpu_custom(l.output, m*n*l.batch, l.activation);
                 return;
-
-            }
+            */}
             else {
                 //printf(" l.index = %d - FP32 \n", l.index);
                 float *im = state.input + (i*l.groups + j)*(l.c / l.groups)*l.h*l.w;
@@ -1529,7 +1529,7 @@ void assisted_excitation_forward(convolutional_layer l, network_state state)
     free(a_avg);
 }
 
-
+/*
 void backward_convolutional_layer(convolutional_layer l, network_state state)
 {
     int i, j;
@@ -1616,7 +1616,7 @@ void update_convolutional_layer(convolutional_layer l, int batch, float learning
     }
 }
 
-
+*/
 
 image get_convolutional_weight(convolutional_layer l, int i)
 {
