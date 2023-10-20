@@ -1,12 +1,9 @@
 #include <stdio.h>
 
 #include "network.h"
-#include "detection_layer.h"
-#include "cost_layer.h"
 #include "utils.h"
 #include "parser.h"
 #include "box.h"
-#include "demo.h"
 
 char *coco_classes[] = {"person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow","elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee","skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli","carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed","dining table","toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven","toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"};
 
@@ -331,60 +328,6 @@ void validate_coco_recall(char *cfgfile, char *weightfile)
     free(probs);
 }
 
-void test_coco(char *cfgfile, char *weightfile, char *filename, float thresh)
-{
-    image **alphabet = load_alphabet();
-    network net = parse_network_cfg(cfgfile);
-    if(weightfile){
-        load_weights(&net, weightfile);
-    }
-    detection_layer l = net.layers[net.n-1];
-    set_batch_network(&net, 1);
-    srand(2222222);
-    float nms = .4;
-    clock_t time;
-    char buff[256];
-    char *input = buff;
-    int j;
-    box* boxes = (box*)xcalloc(l.side * l.side * l.n, sizeof(box));
-    float** probs = (float**)xcalloc(l.side * l.side * l.n, sizeof(float*));
-    for(j = 0; j < l.side*l.side*l.n; ++j) {
-      probs[j] = (float*)xcalloc(l.classes, sizeof(float));
-    }
-    while(1){
-        if(filename){
-            strncpy(input, filename, 256);
-        } else {
-            printf("Enter Image Path: ");
-            fflush(stdout);
-            input = fgets(input, 256, stdin);
-            if(!input) break;
-            strtok(input, "\n");
-        }
-        image im = load_image_color(input,0,0);
-        image sized = resize_image(im, net.w, net.h);
-        float *X = sized.data;
-        time=clock();
-        network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
-        get_detection_boxes(l, 1, 1, thresh, probs, boxes, 0);
-        if (nms) do_nms_sort_v2(boxes, probs, l.side*l.side*l.n, l.classes, nms);
-        draw_detections(im, l.side*l.side*l.n, thresh, boxes, probs, coco_classes, alphabet, 80);
-        save_image(im, "prediction");
-        show_image(im, "predictions");
-        free_image(im);
-        free_image(sized);
-        free_alphabet(alphabet);
-        wait_until_press_key_cv();
-        destroy_all_windows_cv();
-        if (filename) break;
-    }
-    free(boxes);
-    for(j = 0; j < l.side*l.side*l.n; ++j) {
-        free(probs[j]);
-    }
-    free(probs);
-}
 
 void run_coco(int argc, char **argv)
 {

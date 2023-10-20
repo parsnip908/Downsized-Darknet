@@ -1,9 +1,7 @@
 #include "data.h"
 #include "utils.h"
 #include "image.h"
-#include "dark_cuda.h"
 #include "box.h"
-#include "http_stream.h"
 
 #include <stdio.h>
 #include <stdlib.h>

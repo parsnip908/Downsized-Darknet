@@ -5,13 +5,7 @@
 #include "blas.h"
 #include "assert.h"
 #include "classifier.h"
-#include "dark_cuda.h"
-#ifdef WIN32
-#include <time.h>
-#include "gettimeofday.h"
-#else
 #include <sys/time.h>
-#endif
 
 float validate_classifier_single(char *datacfg, char *filename, char *weightfile, network *existing_net, int topk_custom);
 

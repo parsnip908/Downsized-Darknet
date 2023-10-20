@@ -9,8 +9,6 @@
 #include "parser.h"
 #include "utils.h"
 #include "blas.h"
-#include "connected_layer.h"
-
 
 int main(int argc, char **argv)
 {

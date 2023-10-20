@@ -1,10 +1,7 @@
 #include "network.h"
-#include "detection_layer.h"
-#include "cost_layer.h"
 #include "utils.h"
 #include "parser.h"
 #include "box.h"
-#include "demo.h"
 
 char *voc_names[] = {"aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"};
 
@@ -284,62 +281,62 @@ void validate_yolo_recall(char *cfgfile, char *weightfile)
     }
 }
 
-void test_yolo(char *cfgfile, char *weightfile, char *filename, float thresh)
-{
-    image **alphabet = load_alphabet();
-    network net = parse_network_cfg(cfgfile);
-    if(weightfile){
-        load_weights(&net, weightfile);
-    }
-    detection_layer l = net.layers[net.n-1];
-    set_batch_network(&net, 1);
-    srand(2222222);
-    char buff[256];
-    char *input = buff;
-    int j;
-    float nms=.4;
-    box* boxes = (box*)xcalloc(l.side * l.side * l.n, sizeof(box));
-    float** probs = (float**)xcalloc(l.side * l.side * l.n, sizeof(float*));
-    for(j = 0; j < l.side*l.side*l.n; ++j) {
-        probs[j] = (float*)xcalloc(l.classes, sizeof(float));
-    }
-    while(1){
-        if(filename){
-            strncpy(input, filename, 256);
-        } else {
-            printf("Enter Image Path: ");
-            fflush(stdout);
-            input = fgets(input, 256, stdin);
-            if(!input) return;
-            strtok(input, "\n");
-        }
-        image im = load_image_color(input,0,0);
-        image sized = resize_image(im, net.w, net.h);
-        float *X = sized.data;
-        clock_t time=clock();
-        network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
-        get_detection_boxes(l, 1, 1, thresh, probs, boxes, 0);
-        if (nms) do_nms_sort_v2(boxes, probs, l.side*l.side*l.n, l.classes, nms);
-        //draw_detections(im, l.side*l.side*l.n, thresh, boxes, probs, voc_names, alphabet, 20);
-        draw_detections(im, l.side*l.side*l.n, thresh, boxes, probs, voc_names, alphabet, 20);
-        save_image(im, "predictions");
-        show_image(im, "predictions");
+// void test_yolo(char *cfgfile, char *weightfile, char *filename, float thresh)
+// {
+//     image **alphabet = load_alphabet();
+//     network net = parse_network_cfg(cfgfile);
+//     if(weightfile){
+//         load_weights(&net, weightfile);
+//     }
+//     detection_layer l = net.layers[net.n-1];
+//     set_batch_network(&net, 1);
+//     srand(2222222);
+//     char buff[256];
+//     char *input = buff;
+//     int j;
+//     float nms=.4;
+//     box* boxes = (box*)xcalloc(l.side * l.side * l.n, sizeof(box));
+//     float** probs = (float**)xcalloc(l.side * l.side * l.n, sizeof(float*));
+//     for(j = 0; j < l.side*l.side*l.n; ++j) {
+//         probs[j] = (float*)xcalloc(l.classes, sizeof(float));
+//     }
+//     while(1){
+//         if(filename){
+//             strncpy(input, filename, 256);
+//         } else {
+//             printf("Enter Image Path: ");
+//             fflush(stdout);
+//             input = fgets(input, 256, stdin);
+//             if(!input) return;
+//             strtok(input, "\n");
+//         }
+//         image im = load_image_color(input,0,0);
+//         image sized = resize_image(im, net.w, net.h);
+//         float *X = sized.data;
+//         clock_t time=clock();
+//         network_predict(net, X);
+//         printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+//         get_detection_boxes(l, 1, 1, thresh, probs, boxes, 0);
+//         if (nms) do_nms_sort_v2(boxes, probs, l.side*l.side*l.n, l.classes, nms);
+//         //draw_detections(im, l.side*l.side*l.n, thresh, boxes, probs, voc_names, alphabet, 20);
+//         draw_detections(im, l.side*l.side*l.n, thresh, boxes, probs, voc_names, alphabet, 20);
+//         save_image(im, "predictions");
+//         show_image(im, "predictions");
 
-        free_image(im);
-        free_image(sized);
-        free_alphabet(alphabet);
-        wait_until_press_key_cv();
-        destroy_all_windows_cv();
+//         free_image(im);
+//         free_image(sized);
+//         free_alphabet(alphabet);
+//         wait_until_press_key_cv();
+//         destroy_all_windows_cv();
 
-      if (filename) break;
-    }
-    free(boxes);
-    for(j = 0; j < l.side*l.side*l.n; ++j) {
-        free(probs[j]);
-    }
-    free(probs);
-}
+//       if (filename) break;
+//     }
+//     free(boxes);
+//     for(j = 0; j < l.side*l.side*l.n; ++j) {
+//         free(probs[j]);
+//     }
+//     free(probs);
+// }
 
 void run_yolo(int argc, char **argv)
 {

@@ -1,5 +1,5 @@
 #include "network.h"
-#include "cost_layer.h"
+// #include "cost_layer.h"
 #include "utils.h"
 #include "parser.h"
 

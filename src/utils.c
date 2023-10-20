@@ -12,14 +12,9 @@
 #include <assert.h>
 #include <float.h>
 #include <limits.h>
-#include "darkunistd.h"
-#ifdef WIN32
-#include "gettimeofday.h"
-#else
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <execinfo.h>
-#endif
 
 
 #ifndef USE_CMAKE_LIBS

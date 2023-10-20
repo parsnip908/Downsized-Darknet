@@ -1,16 +1,12 @@
 #include "gemm.h"
 #include "utils.h"
 #include "im2col.h"
-#include "dark_cuda.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
 #include <string.h>
 #include <stdint.h>
-#if defined(_OPENMP)
-#include <omp.h>
-#endif
 
 #if defined(_MSC_VER)
 #if defined(_M_ARM) || defined(_M_ARM64)

@@ -1,6 +1,5 @@
 #include "convolutional_layer.h"
 #include "utils.h"
-#include "batchnorm_layer.h"
 #include "im2col.h"
 #include "col2im.h"
 #include "blas.h"
@@ -29,12 +28,6 @@ void swap_binary(convolutional_layer *l)
     float *swap = l->weights;
     l->weights = l->binary_weights;
     l->binary_weights = swap;
-
-    #ifdef GPU
-    swap = l->weights_gpu;
-    l->weights_gpu = l->binary_weights_gpu;
-    l->binary_weights_gpu = swap;
-    #endif
 }
 
 void binarize_weights(float *weights, int n, int size, float *binary)
@@ -104,37 +97,6 @@ image get_convolutional_delta(convolutional_layer l)
 }
 
 size_t get_workspace_size32(layer l){
-#ifdef CUDNN
-    if(gpu_index >= 0){
-        size_t most = 0;
-        size_t s = 0;
-        CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(cudnn_handle(),
-                l.srcTensorDesc,
-                l.weightDesc,
-                l.convDesc,
-                l.dstTensorDesc,
-                l.fw_algo,
-                &s));
-        if (s > most) most = s;
-        CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(cudnn_handle(),
-                l.srcTensorDesc,
-                l.ddstTensorDesc,
-                l.convDesc,
-                l.dweightDesc,
-                l.bf_algo,
-                &s));
-        if (s > most && l.train) most = s;
-        CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(cudnn_handle(),
-                l.weightDesc,
-                l.ddstTensorDesc,
-                l.convDesc,
-                l.dsrcTensorDesc,
-                l.bd_algo,
-                &s));
-        if (s > most && l.train) most = s;
-        return most;
-    }
-    #endif
     if (l.xnor) {
         size_t re_packed_input_size = l.c * l.w * l.h * sizeof(float);
         size_t workspace_size = (size_t)l.bit_align*l.size*l.size*l.c * sizeof(float);
@@ -145,37 +107,6 @@ size_t get_workspace_size32(layer l){
 }
 
 size_t get_workspace_size16(layer l) {
-#if defined(CUDNN) && defined(CUDNN_HALF)
-    if (gpu_index >= 0) {
-        size_t most = 0;
-        size_t s = 0;
-        CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(cudnn_handle(),
-            l.srcTensorDesc16,
-            l.weightDesc16,
-            l.convDesc,
-            l.dstTensorDesc16,
-            l.fw_algo16,
-            &s));
-        if (s > most) most = s;
-        CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(cudnn_handle(),
-            l.srcTensorDesc16,
-            l.ddstTensorDesc16,
-            l.convDesc,
-            l.dweightDesc16,
-            l.bf_algo16,
-            &s));
-        if (s > most && l.train) most = s;
-        CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(cudnn_handle(),
-            l.weightDesc16,
-            l.ddstTensorDesc16,
-            l.convDesc,
-            l.dsrcTensorDesc16,
-            l.bd_algo16,
-            &s));
-        if (s > most && l.train) most = s;
-        return most;
-    }
-#endif
     return 0;
     //if (l.xnor) return (size_t)l.bit_align*l.size*l.size*l.c * sizeof(float);
     //return (size_t)l.out_h*l.out_w*l.size*l.size*l.c * sizeof(float);
@@ -187,287 +118,6 @@ size_t get_convolutional_workspace_size(layer l) {
     if (workspace_size16 > workspace_size) workspace_size = workspace_size16;
     return workspace_size;
 }
-#ifdef GPU
-#ifdef CUDNN
-void create_convolutional_cudnn_tensors(layer *l)
-{
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->normTensorDesc));
-
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->normDstTensorDesc));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->srcTensorDesc));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->dstTensorDesc));
-    CHECK_CUDNN(cudnnCreateFilterDescriptor(&l->weightDesc));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->dsrcTensorDesc));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->ddstTensorDesc));
-    CHECK_CUDNN(cudnnCreateFilterDescriptor(&l->dweightDesc));
-
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->normDstTensorDescF16));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->srcTensorDesc16));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->dstTensorDesc16));
-    CHECK_CUDNN(cudnnCreateFilterDescriptor(&l->weightDesc16));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->dsrcTensorDesc16));
-    CHECK_CUDNN(cudnnCreateTensorDescriptor(&l->ddstTensorDesc16));
-    CHECK_CUDNN(cudnnCreateFilterDescriptor(&l->dweightDesc16));
-
-    CHECK_CUDNN(cudnnCreateConvolutionDescriptor(&l->convDesc));
-}
-
-void cudnn_convolutional_setup(layer *l, int cudnn_preference, size_t workspace_size_specify)
-{
-
-// CUDNN_HALF
-    // TRUE_HALF_CONFIG is only supported on architectures with true fp16 support (compute capability 5.3 and 6.0):
-    //   Tegra X1, Jetson TX1, DRIVE CX, DRIVE PX, Quadro GP100, Tesla P100
-    // PSEUDO_HALF_CONFIG is required for Tensor Cores - our case!
-
-    cudnnDataType_t data_type = CUDNN_DATA_FLOAT;
-
-#if(CUDNN_MAJOR >= 7)
-    // Tensor Core uses CUDNN_TENSOR_OP_MATH instead of CUDNN_DEFAULT_MATH
-    // For *_ALGO_WINOGRAD_NONFUSED can be used CUDNN_DATA_FLOAT
-    // otherwise Input, Filter and Output descriptors (xDesc, yDesc, wDesc, dxDesc, dyDesc and dwDesc as applicable) have dataType = CUDNN_DATA_HALF
-    // Three techniques for training using Mixed-precision: https://devblogs.nvidia.com/mixed-precision-training-deep-neural-networks/
-    // 1. Accumulation into FP32
-    // 2. Loss Scaling - required only for: activation gradients. We do not use.
-    // 3. FP32 Master Copy of Weights
-    // More: http://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html#tensor_ops
-    if (l->groups < 1) l->groups = 1;
-    if (l->stride_x < 1) l->stride_x = 1;
-    if (l->stride_y < 1) l->stride_y = 1;
-    CHECK_CUDNN(cudnnSetConvolutionGroupCount(l->convDesc, l->groups));
-    CHECK_CUDNN(cudnnSetConvolutionMathType(l->convDesc, CUDNN_TENSOR_OP_MATH));
-#if((CUDNN_MAJOR*10 + CUDNN_MINOR) >= 72)   // cuDNN >= 7.2
-    //CHECK_CUDNN(cudnnSetConvolutionMathType(l->convDesc, CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION)); // reduces the speed of regular and group convolution
-#endif
-#else   //if(CUDNN_MAJOR >= 7)
-    if (l->groups > 1) {
-        error("CUDNN < 7 doesn't support groups, please upgrade!", DARKNET_LOC);
-    }
-#endif
-
-    // INT8_CONFIG, INT8_EXT_CONFIG, INT8x4_CONFIG and INT8x4_EXT_CONFIG are only supported
-    //   on architectures with DP4A support (compute capability 6.1 and later).
-    //cudnnDataType_t data_type = CUDNN_DATA_INT8;
-
-    // backward delta
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->dsrcTensorDesc, CUDNN_TENSOR_NCHW, data_type, l->batch, l->c, l->h, l->w));
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->ddstTensorDesc, CUDNN_TENSOR_NCHW, data_type, l->batch, l->out_c, l->out_h, l->out_w));
-    CHECK_CUDNN(cudnnSetFilter4dDescriptor(l->dweightDesc, data_type, CUDNN_TENSOR_NCHW, l->n, l->c / l->groups, l->size, l->size));
-
-    // forward
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->srcTensorDesc, CUDNN_TENSOR_NCHW, data_type, l->batch, l->c, l->h, l->w));
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->dstTensorDesc, CUDNN_TENSOR_NCHW, data_type, l->batch, l->out_c, l->out_h, l->out_w));
-    CHECK_CUDNN(cudnnSetFilter4dDescriptor(l->weightDesc, data_type, CUDNN_TENSOR_NCHW, l->n, l->c / l->groups, l->size, l->size));
-
-    // backward delta
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->dsrcTensorDesc16, CUDNN_TENSOR_NCHW, CUDNN_DATA_HALF, l->batch, l->c, l->h, l->w));
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->ddstTensorDesc16, CUDNN_TENSOR_NCHW, CUDNN_DATA_HALF, l->batch, l->out_c, l->out_h, l->out_w));
-    CHECK_CUDNN(cudnnSetFilter4dDescriptor(l->dweightDesc16, CUDNN_DATA_HALF, CUDNN_TENSOR_NCHW, l->n, l->c / l->groups, l->size, l->size));
-
-    // forward
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->srcTensorDesc16, CUDNN_TENSOR_NCHW, CUDNN_DATA_HALF, l->batch, l->c, l->h, l->w));
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->dstTensorDesc16, CUDNN_TENSOR_NCHW, CUDNN_DATA_HALF, l->batch, l->out_c, l->out_h, l->out_w));
-    CHECK_CUDNN(cudnnSetFilter4dDescriptor(l->weightDesc16, CUDNN_DATA_HALF, CUDNN_TENSOR_NCHW, l->n, l->c / l->groups, l->size, l->size));
-
-    // batch norm
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->normDstTensorDescF16, CUDNN_TENSOR_NCHW, CUDNN_DATA_HALF, l->batch, l->out_c, l->out_h, l->out_w));
-
-    // batch norm
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, l->out_c, 1, 1));
-    CHECK_CUDNN(cudnnSetTensor4dDescriptor(l->normDstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->out_c, l->out_h, l->out_w));
-
-    //printf("\n l->dilation = %d, l->pad = %d, l->size = %d, l->stride = %d, l->stride_x = %d, l->stride_y = %d, l->groups = %d, l->w = %d, l->h = %d, l->c = %d, l->n = %d, l->out_w = %d, l->out_h = %d, l->out_c = %d, l->batch = %d, data_type = %d \n",
-    //    l->dilation, l->pad, l->size, l->stride, l->stride_x, l->stride_y, l->groups, l->w, l->h, l->c, l->n, l->out_w, l->out_h, l->out_c, l->batch, data_type);
-#if(CUDNN_MAJOR >= 6)
-    CHECK_CUDNN(cudnnSetConvolution2dDescriptor(l->convDesc, l->pad * l->dilation, l->pad * l->dilation, l->stride_y, l->stride_x, l->dilation, l->dilation, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));    // cudnn >= 6.0
-#else
-    CHECK_CUDNN(cudnnSetConvolution2dDescriptor(l->convDesc, l->pad * l->dilation, l->pad * l->dilation, l->stride_y, l->stride_x, l->dilation, l->dilation, CUDNN_CROSS_CORRELATION));    // cudnn 5.1
-#endif
-
-
-#if CUDNN_MAJOR >= 8
-
-    if (cudnn_preference == cudnn_smallest)
-    {
-        workspace_size_specify = 0;
-    }
-
-    size_t free_memory, total_memory;
-    int requested_algo_count = 0, returned_algo_count = 0;
-    int found_conv_algorithm = 0;
-    float min_time = 1000000;   // 1000 sec
-
-    // FWD
-    cudnnConvolutionFwdAlgoPerf_t conv_fwd_results[100];
-    CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithmMaxCount(cudnn_handle(), &requested_algo_count));
-
-    CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithm_v7(cudnn_handle(),
-        l->srcTensorDesc,
-        l->weightDesc,
-        l->convDesc,
-        l->dstTensorDesc,
-        requested_algo_count, // (cudnnConvolutionFwdPreference_t)forward_algo,
-        &returned_algo_count, // workspace_size_specify,
-        conv_fwd_results));
-
-    CHECK_CUDA(cudaMemGetInfo(&free_memory, &total_memory));
-
-    found_conv_algorithm = 0;
-    min_time = 1000000;   // 1000 sec
-    for (int i = 0; i < returned_algo_count; i++)
-    {
-        if (conv_fwd_results[i].status == CUDNN_STATUS_SUCCESS &&
-            conv_fwd_results[i].algo != CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED &&
-            conv_fwd_results[i].memory < free_memory &&
-            (conv_fwd_results[i].memory <= workspace_size_specify || cudnn_preference == cudnn_fastest) &&
-            conv_fwd_results[i].time < min_time)
-        {
-            found_conv_algorithm = 1;
-            l->fw_algo = conv_fwd_results[i].algo;
-            min_time = conv_fwd_results[i].time;
-            //printf(" - cuDNN FWD algo: %d, time = %f ms \n", l->fw_algo, min_time);
-        }
-    }
-
-    if (!found_conv_algorithm) {
-        error("Error: cuDNN hasn't found FWD algo for convolution", DARKNET_LOC);
-    }
-    //printf(" cuDNN FWD algo: %d, time = %f ms \n", l->fw_algo, min_time);
-
-    // Bwd-Data
-    cudnnConvolutionBwdDataAlgoPerf_t conv_bwd_data_results[100];
-    CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(cudnn_handle(), &requested_algo_count));
-
-    CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithm_v7(cudnn_handle(),
-        l->weightDesc,
-        l->ddstTensorDesc,
-        l->convDesc,
-        l->dsrcTensorDesc,
-        requested_algo_count, // (cudnnConvolutionFwdPreference_t)forward_algo,
-        &returned_algo_count, // workspace_size_specify,
-        &conv_bwd_data_results[0]));
-
-    CHECK_CUDA(cudaMemGetInfo(&free_memory, &total_memory));
-
-    found_conv_algorithm = 0;
-    min_time = 1000000;   // 1000 sec
-    for (int i = 0; i < returned_algo_count; i++)
-    {
-        if (conv_bwd_data_results[i].status == CUDNN_STATUS_SUCCESS &&
-            conv_bwd_data_results[i].memory < free_memory &&
-            (conv_bwd_data_results[i].memory <= workspace_size_specify || cudnn_preference == cudnn_fastest) &&
-            conv_bwd_data_results[i].time < min_time)
-        {
-            found_conv_algorithm = 1;
-            l->bd_algo = conv_bwd_data_results[i].algo;
-            min_time = conv_bwd_data_results[i].time;
-        }
-    }
-
-    if (!found_conv_algorithm) {
-        error("Error: cuDNN hasn't found BWD-data algo for convolution", DARKNET_LOC);
-    }
-    //printf(" cuDNN BWD-data algo: %d \n", l->bd_algo);
-
-    // Bwd-Filters
-    cudnnConvolutionBwdFilterAlgoPerf_t conv_bwd_filter_results[100];
-    CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(cudnn_handle(), &requested_algo_count));
-
-    CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithm_v7(cudnn_handle(),
-        l->srcTensorDesc,
-        l->ddstTensorDesc,
-        l->convDesc,
-        l->dweightDesc,
-        requested_algo_count, // (cudnnConvolutionFwdPreference_t)forward_algo,
-        &returned_algo_count, // workspace_size_specify,
-        &conv_bwd_filter_results[0]));
-
-    CHECK_CUDA(cudaMemGetInfo(&free_memory, &total_memory));
-
-    found_conv_algorithm = 0;
-    min_time = 1000000;   // 1000 sec
-    for (int i = 0; i < returned_algo_count; i++)
-    {
-        if (conv_bwd_filter_results[i].status == CUDNN_STATUS_SUCCESS &&
-            conv_bwd_filter_results[i].memory < free_memory &&
-            (conv_bwd_filter_results[i].memory <= workspace_size_specify || cudnn_preference == cudnn_fastest) &&
-            conv_bwd_filter_results[i].time < min_time)
-        {
-            found_conv_algorithm = 1;
-            l->bf_algo = conv_bwd_filter_results[i].algo;
-            min_time = conv_bwd_filter_results[i].time;
-        }
-    }
-
-    if (!found_conv_algorithm) {
-        error("Error: cuDNN hasn't found BWD-filter algo for convolution", DARKNET_LOC);
-    }
-    //printf(" cuDNN BWD-filter algo: %d \n", l->bf_algo);
-
-#else   // CUDNN_MAJOR >= 8
-
-    int forward_algo = CUDNN_CONVOLUTION_FWD_PREFER_FASTEST;
-    int backward_algo = CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST;
-    int backward_filter = CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST;
-    if (cudnn_preference == cudnn_smallest)
-    {
-        forward_algo = CUDNN_CONVOLUTION_FWD_NO_WORKSPACE;
-        backward_algo = CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE;
-        backward_filter = CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE;
-        printf(" CUDNN-slow ");
-    }
-    if (cudnn_preference == cudnn_specify)
-    {
-        forward_algo = CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT;
-        backward_algo = CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT;
-        backward_filter = CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT;
-        //printf(" CUDNN-specified %zu ", workspace_size_specify);
-    }
-
-    CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithm(cudnn_handle(),
-            l->srcTensorDesc,
-            l->weightDesc,
-            l->convDesc,
-            l->dstTensorDesc,
-            (cudnnConvolutionFwdPreference_t)forward_algo,
-            workspace_size_specify,
-            &l->fw_algo));
-
-    CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithm(cudnn_handle(),
-        l->weightDesc,
-        l->ddstTensorDesc,
-        l->convDesc,
-        l->dsrcTensorDesc,
-        (cudnnConvolutionBwdDataPreference_t)backward_algo,
-        workspace_size_specify,
-        &l->bd_algo));
-
-    CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithm(cudnn_handle(),
-        l->srcTensorDesc,
-        l->ddstTensorDesc,
-        l->convDesc,
-        l->dweightDesc,
-        (cudnnConvolutionBwdFilterPreference_t)backward_filter,
-        workspace_size_specify,
-        &l->bf_algo));
-#endif  // CUDNN_MAJOR >= 8
-
-
-    //if (data_type == CUDNN_DATA_HALF)
-    {
-        // HALF-16 if(data_type == CUDNN_DATA_HALF)
-        l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
-        l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
-        l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1;
-
-        // FLOAT-32 if(data_type == CUDNN_DATA_FLOAT)
-        //l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED;
-        //l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED;
-        //l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED;
-    }
-}
-#endif
-#endif
 
 
 void free_convolutional_batchnorm(convolutional_layer *l)
@@ -483,19 +133,6 @@ void free_convolutional_batchnorm(convolutional_layer *l)
         if (l->rolling_variance) free(l->rolling_variance),  l->rolling_variance = NULL;
         if (l->x)               free(l->x),                 l->x = NULL;
         if (l->x_norm)          free(l->x_norm),            l->x_norm = NULL;
-
-#ifdef GPU
-        if (l->scales_gpu)          cuda_free(l->scales_gpu),           l->scales_gpu = NULL;
-        if (l->scale_updates_gpu)   cuda_free(l->scale_updates_gpu),    l->scale_updates_gpu = NULL;
-        if (l->mean_gpu)            cuda_free(l->mean_gpu),             l->mean_gpu = NULL;
-        if (l->variance_gpu)        cuda_free(l->variance_gpu),         l->variance_gpu = NULL;
-        if (l->mean_delta_gpu)      cuda_free(l->mean_delta_gpu),       l->mean_delta_gpu = NULL;
-        if (l->variance_delta_gpu)  cuda_free(l->variance_delta_gpu),   l->variance_delta_gpu = NULL;
-        if (l->rolling_mean_gpu)    cuda_free(l->rolling_mean_gpu),     l->rolling_mean_gpu = NULL;
-        if (l->rolling_variance_gpu) cuda_free(l->rolling_variance_gpu), l->rolling_variance_gpu = NULL;
-        if (l->x_gpu)               cuda_free(l->x_gpu),                l->x_gpu = NULL;
-        if (l->x_norm_gpu)          cuda_free(l->x_norm_gpu),           l->x_norm_gpu = NULL;
-#endif
     }
 }
 
@@ -1507,22 +1144,6 @@ void assisted_excitation_forward(convolutional_layer l, network_state state)
 
     if(0)   // visualize ground truth
     {
-#ifdef OPENCV
-        for (b = 0; b < l.batch; ++b)
-        {
-            image img = float_to_image(l.out_w, l.out_h, 1, &g[l.out_w*l.out_h*b]);
-            char buff[100];
-            sprintf(buff, "a_excitation_%d", b);
-            show_image_cv(img, buff);
-
-            image img2 = float_to_image(l.out_w, l.out_h, 1, &l.output[l.out_w*l.out_h*l.out_c*b]);
-            char buff2[100];
-            sprintf(buff2, "a_excitation_act_%d", b);
-            show_image_cv(img2, buff2);
-            wait_key_cv(5);
-        }
-        wait_until_press_key_cv();
-#endif // OPENCV
     }
 
     free(g);
