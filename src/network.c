@@ -760,10 +760,6 @@ float *network_predict_ptr(network *net, float *input)
 
 float *network_predict(network net, float *input)
 {
-#ifdef GPU
-    if(gpu_index >= 0)  return network_predict_gpu(net, input);
-#endif
-
     network_state state = {0};
     state.net = net;
     state.index = 0;
@@ -775,21 +771,6 @@ float *network_predict(network net, float *input)
     float *out = get_network_output(net);
     return out;
 }
-
-#ifdef CUDA_OPENGL_INTEGRATION
-float *network_predict_gl_texture(network *net, uint32_t texture_id)
-{
-    if(net->batch != 1) {
-        set_batch_network(net, 1);
-    }
-
-    if(gpu_index >= 0) {
-        return network_predict_gpu_gl_texture(*net, texture_id);
-    }
-
-    return NULL;
-}
-#endif // CUDA_OPENGL_INTEGRATION
 
 int num_detections(network *net, float thresh)
 {

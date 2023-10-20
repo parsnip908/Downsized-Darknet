@@ -1,7 +1,6 @@
 #ifndef ACTIVATIONS_H
 #define ACTIVATIONS_H
 #include "darknet.h"
-#include "dark_cuda.h"
 #include "math.h"
 #include "utils.h"
 
@@ -9,9 +8,6 @@
 //    LOGISTIC, RELU, RELIE, LINEAR, RAMP, TANH, PLSE, LEAKY, ELU, LOGGY, STAIR, HARDTAN, LHTAN, SELU, SWISH, MISH
 //}ACTIVATION;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 ACTIVATION get_activation(char *s);
 
 char *get_activation_string(ACTIVATION a);
@@ -29,21 +25,6 @@ void activate_array_normalize_channels(float *x, const int n, int batch, int cha
 void gradient_array_normalize_channels(float *x, const int n, int batch, int channels, int wh_step, float *delta);
 void activate_array_normalize_channels_softmax(float *x, const int n, int batch, int channels, int wh_step, float *output, int use_max_val);
 void gradient_array_normalize_channels_softmax(float *x, const int n, int batch, int channels, int wh_step, float *delta);
-#ifdef GPU
-void activate_array_ongpu(float *x, int n, ACTIVATION a);
-void activate_array_swish_ongpu(float *x, int n, float *output_sigmoid_gpu, float *output_gpu);
-void activate_array_mish_ongpu(float *x, int n, float *activation_input_gpu, float *output_gpu);
-void activate_array_hard_mish_ongpu(float *x, int n, float *activation_input_gpu, float *output_gpu);
-void gradient_array_ongpu(float *x, int n, ACTIVATION a, float *delta);
-void gradient_array_swish_ongpu(float *x, int n, float *sigmoid_gpu, float *delta);
-void gradient_array_mish_ongpu(int n, float *activation_input_gpu, float *delta);
-void gradient_array_hard_mish_ongpu(int n, float *activation_input_gpu, float *delta);
-void activate_array_normalize_channels_ongpu(float *x, int n, int batch, int channels, int wh_step, float *output_gpu);
-void gradient_array_normalize_channels_ongpu(float *output_gpu, int n, int batch, int channels, int wh_step, float *delta_gpu);
-void activate_array_normalize_channels_softmax_ongpu(float *x, int n, int batch, int channels, int wh_step, float *output_gpu, int use_max_val);
-void gradient_array_normalize_channels_softmax_ongpu(float *output_gpu, int n, int batch, int channels, int wh_step, float *delta_gpu);
-
-#endif
 
 static inline float stair_activate(float x)
 {
@@ -126,9 +107,5 @@ static inline float gelu_gradient(float x) {
     return 0.5*tanhf(0.0356774*x3 + 0.797885*x) + (0.0535161*x3 + 0.398942*x) * powf(sech(0.0356774*x3 + 0.797885*x), 2) + 0.5;
 }
 static inline float plse_gradient(float x){return (x < 0 || x > 1) ? .01f : .125f;}
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
