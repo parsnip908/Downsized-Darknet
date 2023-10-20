@@ -1465,31 +1465,6 @@ void test_resize(char *filename)
     show_image(c2, "C2");
     show_image(c3, "C3");
     show_image(c4, "C4");
-
-#ifdef OPENCV
-    while(1){
-        image aug = random_augment_image(im, 0, .75, 320, 448, 320);
-        show_image(aug, "aug");
-        free_image(aug);
-
-
-        float exposure = 1.15;
-        float saturation = 1.15;
-        float hue = .05;
-
-        image c = copy_image(im);
-
-        float dexp = rand_scale(exposure);
-        float dsat = rand_scale(saturation);
-        float dhue = rand_uniform(-hue, hue);
-
-        distort_image(c, dhue, dsat, dexp);
-        show_image(c, "rand");
-        printf("%f %f %f\n", dhue, dsat, dexp);
-        free_image(c);
-        wait_until_press_key_cv();
-    }
-#endif
 }
 
 
@@ -1539,12 +1514,8 @@ image load_image_stb_resize(char *filename, int w, int h, int c)
 
 image load_image(char *filename, int w, int h, int c)
 {
-#ifdef OPENCV
-    image out = load_image_cv(filename, c);
-#else
-    image out = load_image_stb(filename, c);
-#endif  // OPENCV
 
+    image out = load_image_stb(filename, c);
     if((h && w) && (h != out.h || w != out.w)){
         image resized = resize_image(out, w, h);
         free_image(out);

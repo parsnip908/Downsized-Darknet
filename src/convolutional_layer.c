@@ -708,6 +708,8 @@ void bit_to_float(unsigned char *src, float *dst, size_t size, size_t filters, f
     }
 }
 
+
+// used
 void binary_align_weights(convolutional_layer *l)
 {
     int m = l->n;   // (l->n / l->groups)
@@ -789,29 +791,6 @@ void binary_align_weights(convolutional_layer *l)
     //l->mean_arr = calloc(l->n, sizeof(float));
 
     //get_mean_array(align_weights, align_weights_size, l->n, l->mean_arr);
-
-
-
-
-#ifdef GPU
-    cudaError_t status;
-    l->align_workspace_size = l->bit_align * l->size * l->size * l->c;
-    status = cudaMalloc((void **)&l->align_workspace_gpu, l->align_workspace_size * sizeof(float));
-    status = cudaMalloc((void **)&l->transposed_align_workspace_gpu, l->align_workspace_size * sizeof(float));
-    CHECK_CUDA(status);
-
-    //l->align_bit_weights_gpu = cuda_make_array(l->align_bit_weights, l->align_bit_weights_size * sizeof(char)/sizeof(float));
-    status = cudaMalloc((void **)&l->align_bit_weights_gpu, l->align_bit_weights_size);
-    CHECK_CUDA(status);
-    status = cudaMemcpy(l->align_bit_weights_gpu, l->align_bit_weights, l->align_bit_weights_size, cudaMemcpyHostToDevice);
-    CHECK_CUDA(status);
-    status = cudaMemcpy(l->binary_weights_gpu, l->binary_weights, m*k * sizeof(float), cudaMemcpyHostToDevice);
-    CHECK_CUDA(status);
-
-    //l->mean_arr_gpu = cuda_make_array(l->mean_arr, l->n);
-    cuda_push_array(l->mean_arr_gpu, l->mean_arr, l->n);
-    CHECK_CUDA(cudaDeviceSynchronize());
-#endif // GPU
 
     free(align_weights);
 }

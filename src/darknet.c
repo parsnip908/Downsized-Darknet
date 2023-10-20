@@ -38,8 +38,6 @@ int main(int argc, char **argv)
     printf(" GPU isn't used \n");
     init_cpu();
 
-    show_opencv_info();
-
     float thresh = find_float_arg(argc, argv, "-thresh", .24);
     int ext_output = find_arg(argc, argv, "-ext_output");
     char *filename = (argc > 4) ? argv[4]: 0;
