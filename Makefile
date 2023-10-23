@@ -53,7 +53,7 @@ CFLAGS+=$(OPTS)
 # LDFLAGS+=-lws2_32
 # endif
 
-OBJ=gemm.o utils.o convolutional_layer.o batchnorm_layer.o maxpool_layer.o route_layer.o yolo_layer.o list.o image.o activations.o im2col.o col2im.o blas.o data.o network.o parser.o option_list.o darknet.o box.o detector.o layer.o http_stream.o
+OBJ=gemm.o utils.o convolutional_layer.o batchnorm_layer.o maxpool_layer.o route_layer.o upsample_layer.o yolo_layer.o list.o image.o activations.o im2col.o col2im.o blas.o data.o network.o parser.o option_list.o darknet.o box.o detector.o layer.o http_stream.o
 
 OBJS = $(addprefix $(OBJDIR), $(OBJ))
 DEPS = $(wildcard src/*.h) Makefile include/darknet.h

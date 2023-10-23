@@ -6,7 +6,11 @@
 #include "activations.h"
 #include "assert.h"
 #include "blas.h"
+#include "route_layer.h"
 #include "convolutional_layer.h"
+#include "maxpool_layer.h"
+#include "upsample_layer.h"
+#include "yolo_layer.h"
 #include "list.h"
 #include "option_list.h"
 #include "parser.h"
@@ -112,6 +116,77 @@ typedef struct size_params{
     int train;
     network net;
 } size_params;
+
+route_layer parse_route(list *options, size_params params)
+{
+    char *l = option_find(options, "layers");
+    if(!l) error("Route Layer must specify input layers", DARKNET_LOC);
+    int len = strlen(l);
+    int n = 1;
+    int i;
+    for(i = 0; i < len; ++i){
+        if (l[i] == ',') ++n;
+    }
+
+    int* layers = (int*)xcalloc(n, sizeof(int));
+    int* sizes = (int*)xcalloc(n, sizeof(int));
+    for(i = 0; i < n; ++i){
+        int index = atoi(l);
+        l = strchr(l, ',')+1;
+        if(index < 0) index = params.index + index;
+        layers[i] = index;
+        sizes[i] = params.net.layers[index].outputs;
+    }
+    int batch = params.batch;
+
+    int groups = option_find_int_quiet(options, "groups", 1);
+    int group_id = option_find_int_quiet(options, "group_id", 0);
+
+    route_layer layer = make_route_layer(batch, n, layers, sizes, groups, group_id);
+
+    convolutional_layer first = params.net.layers[layers[0]];
+    layer.out_w = first.out_w;
+    layer.out_h = first.out_h;
+    layer.out_c = first.out_c;
+    for(i = 1; i < n; ++i){
+        int index = layers[i];
+        convolutional_layer next = params.net.layers[index];
+        if(next.out_w == first.out_w && next.out_h == first.out_h){
+            layer.out_c += next.out_c;
+        }else{
+            fprintf(stderr, " The width and height of the input layers are different. \n");
+            layer.out_h = layer.out_w = layer.out_c = 0;
+        }
+    }
+    layer.out_c = layer.out_c / layer.groups;
+
+    layer.w = first.w;
+    layer.h = first.h;
+    layer.c = layer.out_c;
+
+    layer.stream = option_find_int_quiet(options, "stream", -1);
+    layer.wait_stream_id = option_find_int_quiet(options, "wait_stream", -1);
+
+    if (n > 3) fprintf(stderr, " \t    ");
+    else if (n > 1) fprintf(stderr, " \t            ");
+    else fprintf(stderr, " \t\t            ");
+
+    fprintf(stderr, "           ");
+    if (layer.groups > 1) fprintf(stderr, "%d/%d", layer.group_id, layer.groups);
+    else fprintf(stderr, "   ");
+    fprintf(stderr, " -> %4d x%4d x%4d \n", layer.out_w, layer.out_h, layer.out_c);
+
+    return layer;
+}
+
+layer parse_upsample(list *options, size_params params, network net)
+{
+
+    int stride = option_find_int(options, "stride", 2);
+    layer l = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
+    l.scale = option_find_float_quiet(options, "scale", 1);
+    return l;
+}
 
 convolutional_layer parse_convolutional(list *options, size_params params)
 {
@@ -226,7 +301,7 @@ float *get_classes_multipliers(char *cpc, const int classes, const float max_del
         int *counters_per_class = parse_yolo_mask(cpc, &classes_counters);
         if (classes_counters != classes) {
             printf(" number of values in counters_per_class = %d doesn't match with classes = %d \n", classes_counters, classes);
-            error("Error!", DARKNET_LOC);
+            exit(0);
         }
         float max_counter = 0;
         int i;
@@ -245,6 +320,139 @@ float *get_classes_multipliers(char *cpc, const int classes, const float max_del
         printf("\n");
     }
     return classes_multipliers;
+}
+
+layer parse_yolo(list *options, size_params params)
+{
+    int classes = option_find_int(options, "classes", 20);
+    int total = option_find_int(options, "num", 1);
+    int num = total;
+    char *a = option_find_str(options, "mask", 0);
+    int *mask = parse_yolo_mask(a, &num);
+    int max_boxes = option_find_int_quiet(options, "max", 200);
+    layer l = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes, max_boxes);
+    if (l.outputs != params.inputs) {
+        printf("Error: l.outputs == params.inputs \n");
+        printf("filters= in the [convolutional]-layer doesn't correspond to classes= or mask= in [yolo]-layer \n");
+        exit(EXIT_FAILURE);
+    }
+    //assert(l.outputs == params.inputs);
+
+    l.show_details = option_find_int_quiet(options, "show_details", 1);
+    l.max_delta = option_find_float_quiet(options, "max_delta", FLT_MAX);   // set 10
+    char *cpc = option_find_str(options, "counters_per_class", 0);
+    l.classes_multipliers = get_classes_multipliers(cpc, classes, l.max_delta);
+
+    l.label_smooth_eps = option_find_float_quiet(options, "label_smooth_eps", 0.0f);
+    l.scale_x_y = option_find_float_quiet(options, "scale_x_y", 1);
+    l.objectness_smooth = option_find_int_quiet(options, "objectness_smooth", 0);
+    l.new_coords = option_find_int_quiet(options, "new_coords", 0);
+    l.iou_normalizer = option_find_float_quiet(options, "iou_normalizer", 0.75);
+    l.obj_normalizer = option_find_float_quiet(options, "obj_normalizer", 1);
+    l.cls_normalizer = option_find_float_quiet(options, "cls_normalizer", 1);
+    l.delta_normalizer = option_find_float_quiet(options, "delta_normalizer", 1);
+    char *iou_loss = option_find_str_quiet(options, "iou_loss", "mse");   //  "iou");
+
+    if (strcmp(iou_loss, "mse") == 0) l.iou_loss = MSE;
+    else if (strcmp(iou_loss, "giou") == 0) l.iou_loss = GIOU;
+    else if (strcmp(iou_loss, "diou") == 0) l.iou_loss = DIOU;
+    else if (strcmp(iou_loss, "ciou") == 0) l.iou_loss = CIOU;
+    else l.iou_loss = IOU;
+    fprintf(stderr, "[yolo] params: iou loss: %s (%d), iou_norm: %2.2f, obj_norm: %2.2f, cls_norm: %2.2f, delta_norm: %2.2f, scale_x_y: %2.2f\n",
+        iou_loss, l.iou_loss, l.iou_normalizer, l.obj_normalizer, l.cls_normalizer, l.delta_normalizer, l.scale_x_y);
+
+    char *iou_thresh_kind_str = option_find_str_quiet(options, "iou_thresh_kind", "iou");
+    if (strcmp(iou_thresh_kind_str, "iou") == 0) l.iou_thresh_kind = IOU;
+    else if (strcmp(iou_thresh_kind_str, "giou") == 0) l.iou_thresh_kind = GIOU;
+    else if (strcmp(iou_thresh_kind_str, "diou") == 0) l.iou_thresh_kind = DIOU;
+    else if (strcmp(iou_thresh_kind_str, "ciou") == 0) l.iou_thresh_kind = CIOU;
+    else {
+        fprintf(stderr, " Wrong iou_thresh_kind = %s \n", iou_thresh_kind_str);
+        l.iou_thresh_kind = IOU;
+    }
+
+    l.beta_nms = option_find_float_quiet(options, "beta_nms", 0.6);
+    char *nms_kind = option_find_str_quiet(options, "nms_kind", "default");
+    if (strcmp(nms_kind, "default") == 0) l.nms_kind = DEFAULT_NMS;
+    else {
+        if (strcmp(nms_kind, "greedynms") == 0) l.nms_kind = GREEDY_NMS;
+        else if (strcmp(nms_kind, "diounms") == 0) l.nms_kind = DIOU_NMS;
+        else l.nms_kind = DEFAULT_NMS;
+        printf("nms_kind: %s (%d), beta = %f \n", nms_kind, l.nms_kind, l.beta_nms);
+    }
+
+    l.jitter = option_find_float(options, "jitter", .2);
+    l.resize = option_find_float_quiet(options, "resize", 1.0);
+    l.focal_loss = option_find_int_quiet(options, "focal_loss", 0);
+
+    l.ignore_thresh = option_find_float(options, "ignore_thresh", .5);
+    l.truth_thresh = option_find_float(options, "truth_thresh", 1);
+    l.iou_thresh = option_find_float_quiet(options, "iou_thresh", 1); // recommended to use iou_thresh=0.213 in [yolo]
+    l.random = option_find_float_quiet(options, "random", 0);
+
+    l.track_history_size = option_find_int_quiet(options, "track_history_size", 5);
+    l.sim_thresh = option_find_float_quiet(options, "sim_thresh", 0.8);
+    l.dets_for_track = option_find_int_quiet(options, "dets_for_track", 1);
+    l.dets_for_show = option_find_int_quiet(options, "dets_for_show", 1);
+    l.track_ciou_norm = option_find_float_quiet(options, "track_ciou_norm", 0.01);
+    int embedding_layer_id = option_find_int_quiet(options, "embedding_layer", 999999);
+    if (embedding_layer_id < 0) embedding_layer_id = params.index + embedding_layer_id;
+    if (embedding_layer_id != 999999) {
+        printf(" embedding_layer_id = %d, ", embedding_layer_id);
+        layer le = params.net.layers[embedding_layer_id];
+        l.embedding_layer_id = embedding_layer_id;
+        l.embedding_output = (float*)xcalloc(le.batch * le.outputs, sizeof(float));
+        l.embedding_size = le.n / l.n;
+        printf(" embedding_size = %d \n", l.embedding_size);
+        if (le.n % l.n != 0) {
+            printf(" Warning: filters=%d number in embedding_layer=%d isn't divisable by number of anchors %d \n", le.n, embedding_layer_id, l.n);
+            getchar();
+        }
+    }
+
+    char *map_file = option_find_str(options, "map", 0);
+    if (map_file) l.map = read_map(map_file);
+
+    a = option_find_str(options, "anchors", 0);
+    if (a) {
+        int len = strlen(a);
+        int n = 1;
+        int i;
+        for (i = 0; i < len; ++i) {
+            if (a[i] == '#') break;
+            if (a[i] == ',') ++n;
+        }
+        for (i = 0; i < n && i < total*2; ++i) {
+            float bias = atof(a);
+            l.biases[i] = bias;
+            a = strchr(a, ',') + 1;
+        }
+    }
+    return l;
+}
+
+maxpool_layer parse_maxpool(list *options, size_params params)
+{
+    int stride = option_find_int(options, "stride",1);
+    int stride_x = option_find_int_quiet(options, "stride_x", stride);
+    int stride_y = option_find_int_quiet(options, "stride_y", stride);
+    int size = option_find_int(options, "size",stride);
+    int padding = option_find_int_quiet(options, "padding", size-1);
+    int maxpool_depth = option_find_int_quiet(options, "maxpool_depth", 0);
+    int out_channels = option_find_int_quiet(options, "out_channels", 1);
+    int antialiasing = option_find_int_quiet(options, "antialiasing", 0);
+    const int avgpool = 0;
+
+    int batch,h,w,c;
+    h = params.h;
+    w = params.w;
+    c = params.c;
+    batch=params.batch;
+    if(!(h && w && c)) error("Layer before [maxpool] layer must output image.", DARKNET_LOC);
+
+    maxpool_layer layer = make_maxpool_layer(batch, h, w, c, size, stride_x, stride_y, padding, maxpool_depth, out_channels, antialiasing, avgpool, params.train);
+    layer.maxpool_zero_nonmax = option_find_int_quiet(options, "maxpool_zero_nonmax", 0);
+    return layer;
 }
 
 
@@ -306,6 +514,7 @@ void set_train_only_bn(network net)
                 net.layers[i].self_layer->train_only_bn = train_only_bn;
                 net.layers[i].output_layer->train_only_bn = train_only_bn;
             }
+            
         }
     }
 }
@@ -563,6 +772,25 @@ network parse_network_cfg_custom(char *filename, int batch, int time_steps)
         LAYER_TYPE lt = string_to_layer_type(s->type);
         if(lt == CONVOLUTIONAL){
             l = parse_convolutional(options, params);
+        }
+        else if(lt == MAXPOOL){
+            l = parse_maxpool(options, params);
+        }
+        else if(lt == ROUTE){
+            l = parse_route(options, params);
+            int k;
+            for (k = 0; k < l.n; ++k) {
+                net.layers[l.input_layers[k]].use_bin_output = 0;
+                if (count >= last_stop_backward)
+                    net.layers[l.input_layers[k]].keep_delta_gpu = 1;
+            }
+        }
+        else if (lt == UPSAMPLE) {
+            l = parse_upsample(options, params, net);
+        }
+        else if (lt == YOLO) {
+            l = parse_yolo(options, params);
+            l.keep_delta_gpu = 1;
         }
         else{
             fprintf(stderr, "Type not recognized: %s\n", s->type);
