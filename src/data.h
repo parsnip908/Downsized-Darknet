@@ -10,7 +10,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "tree.h"
+// #include "tree.h"
 
 static inline float distance_from_edge(int x, int max)
 {
