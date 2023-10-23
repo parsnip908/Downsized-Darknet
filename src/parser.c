@@ -117,21 +117,21 @@ void free_section(section *s)
     free(s);
 }
 
-void parse_data(char *data, float *a, int n)
-{
-    int i;
-    if(!data) return;
-    char *curr = data;
-    char *next = data;
-    int done = 0;
-    for(i = 0; i < n && !done; ++i){
-        while(*++next !='\0' && *next != ',');
-        if(*next == '\0') done = 1;
-        *next = '\0';
-        sscanf(curr, "%g", &a[i]);
-        curr = next+1;
-    }
-}
+// void parse_data(char *data, float *a, int n)
+// {
+//     int i;
+//     if(!data) return;
+//     char *curr = data;
+//     char *next = data;
+//     int done = 0;
+//     for(i = 0; i < n && !done; ++i){
+//         while(*++next !='\0' && *next != ',');
+//         if(*next == '\0') done = 1;
+//         *next = '\0';
+//         sscanf(curr, "%g", &a[i]);
+//         curr = next+1;
+//     }
+// }
 
 typedef struct size_params{
     int batch;
@@ -1844,250 +1844,250 @@ list *read_cfg(char *filename)
     return sections;
 }
 
-void save_convolutional_weights_binary(layer l, FILE *fp)
-{
-#ifdef GPU
-    if(gpu_index >= 0){
-        pull_convolutional_layer(l);
-    }
-#endif
-    int size = (l.c/l.groups)*l.size*l.size;
-    binarize_weights(l.weights, l.n, size, l.binary_weights);
-    int i, j, k;
-    fwrite(l.biases, sizeof(float), l.n, fp);
-    if (l.batch_normalize){
-        fwrite(l.scales, sizeof(float), l.n, fp);
-        fwrite(l.rolling_mean, sizeof(float), l.n, fp);
-        fwrite(l.rolling_variance, sizeof(float), l.n, fp);
-    }
-    for(i = 0; i < l.n; ++i){
-        float mean = l.binary_weights[i*size];
-        if(mean < 0) mean = -mean;
-        fwrite(&mean, sizeof(float), 1, fp);
-        for(j = 0; j < size/8; ++j){
-            int index = i*size + j*8;
-            unsigned char c = 0;
-            for(k = 0; k < 8; ++k){
-                if (j*8 + k >= size) break;
-                if (l.binary_weights[index + k] > 0) c = (c | 1<<k);
-            }
-            fwrite(&c, sizeof(char), 1, fp);
-        }
-    }
-}
+// void save_convolutional_weights_binary(layer l, FILE *fp)
+// {
+// #ifdef GPU
+//     if(gpu_index >= 0){
+//         pull_convolutional_layer(l);
+//     }
+// #endif
+//     int size = (l.c/l.groups)*l.size*l.size;
+//     binarize_weights(l.weights, l.n, size, l.binary_weights);
+//     int i, j, k;
+//     fwrite(l.biases, sizeof(float), l.n, fp);
+//     if (l.batch_normalize){
+//         fwrite(l.scales, sizeof(float), l.n, fp);
+//         fwrite(l.rolling_mean, sizeof(float), l.n, fp);
+//         fwrite(l.rolling_variance, sizeof(float), l.n, fp);
+//     }
+//     for(i = 0; i < l.n; ++i){
+//         float mean = l.binary_weights[i*size];
+//         if(mean < 0) mean = -mean;
+//         fwrite(&mean, sizeof(float), 1, fp);
+//         for(j = 0; j < size/8; ++j){
+//             int index = i*size + j*8;
+//             unsigned char c = 0;
+//             for(k = 0; k < 8; ++k){
+//                 if (j*8 + k >= size) break;
+//                 if (l.binary_weights[index + k] > 0) c = (c | 1<<k);
+//             }
+//             fwrite(&c, sizeof(char), 1, fp);
+//         }
+//     }
+// }
 
-void save_shortcut_weights(layer l, FILE *fp)
-{
-#ifdef GPU
-    if (gpu_index >= 0) {
-        pull_shortcut_layer(l);
-        printf("\n pull_shortcut_layer \n");
-    }
-#endif
-    int i;
-    //if(l.weight_updates) for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weight_updates[i]);
-    //printf(" l.nweights = %d - update \n", l.nweights);
-    for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
-    printf(" l.nweights = %d \n\n", l.nweights);
+// void save_shortcut_weights(layer l, FILE *fp)
+// {
+// #ifdef GPU
+//     if (gpu_index >= 0) {
+//         pull_shortcut_layer(l);
+//         printf("\n pull_shortcut_layer \n");
+//     }
+// #endif
+//     int i;
+//     //if(l.weight_updates) for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weight_updates[i]);
+//     //printf(" l.nweights = %d - update \n", l.nweights);
+//     for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
+//     printf(" l.nweights = %d \n\n", l.nweights);
 
-    int num = l.nweights;
-    fwrite(l.weights, sizeof(float), num, fp);
-}
+//     int num = l.nweights;
+//     fwrite(l.weights, sizeof(float), num, fp);
+// }
 
-void save_implicit_weights(layer l, FILE *fp)
-{
-#ifdef GPU
-    if (gpu_index >= 0) {
-        pull_implicit_layer(l);
-        //printf("\n pull_implicit_layer \n");
-    }
-#endif
-    int i;
-    //if(l.weight_updates) for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weight_updates[i]);
-    //printf(" l.nweights = %d - update \n", l.nweights);
-    //for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
-    //printf(" l.nweights = %d \n\n", l.nweights);
+// void save_implicit_weights(layer l, FILE *fp)
+// {
+// #ifdef GPU
+//     if (gpu_index >= 0) {
+//         pull_implicit_layer(l);
+//         //printf("\n pull_implicit_layer \n");
+//     }
+// #endif
+//     int i;
+//     //if(l.weight_updates) for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weight_updates[i]);
+//     //printf(" l.nweights = %d - update \n", l.nweights);
+//     //for (i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
+//     //printf(" l.nweights = %d \n\n", l.nweights);
 
-    int num = l.nweights;
-    fwrite(l.weights, sizeof(float), num, fp);
-}
+//     int num = l.nweights;
+//     fwrite(l.weights, sizeof(float), num, fp);
+// }
 
-void save_convolutional_weights(layer l, FILE *fp)
-{
-    if(l.binary){
-        //save_convolutional_weights_binary(l, fp);
-        //return;
-    }
-#ifdef GPU
-    if(gpu_index >= 0){
-        pull_convolutional_layer(l);
-    }
-#endif
-    int num = l.nweights;
-    fwrite(l.biases, sizeof(float), l.n, fp);
-    if (l.batch_normalize){
-        fwrite(l.scales, sizeof(float), l.n, fp);
-        fwrite(l.rolling_mean, sizeof(float), l.n, fp);
-        fwrite(l.rolling_variance, sizeof(float), l.n, fp);
-    }
-    fwrite(l.weights, sizeof(float), num, fp);
-    //if(l.adam){
-    //    fwrite(l.m, sizeof(float), num, fp);
-    //    fwrite(l.v, sizeof(float), num, fp);
-    //}
-}
+// void save_convolutional_weights(layer l, FILE *fp)
+// {
+//     if(l.binary){
+//         //save_convolutional_weights_binary(l, fp);
+//         //return;
+//     }
+// #ifdef GPU
+//     if(gpu_index >= 0){
+//         pull_convolutional_layer(l);
+//     }
+// #endif
+//     int num = l.nweights;
+//     fwrite(l.biases, sizeof(float), l.n, fp);
+//     if (l.batch_normalize){
+//         fwrite(l.scales, sizeof(float), l.n, fp);
+//         fwrite(l.rolling_mean, sizeof(float), l.n, fp);
+//         fwrite(l.rolling_variance, sizeof(float), l.n, fp);
+//     }
+//     fwrite(l.weights, sizeof(float), num, fp);
+//     //if(l.adam){
+//     //    fwrite(l.m, sizeof(float), num, fp);
+//     //    fwrite(l.v, sizeof(float), num, fp);
+//     //}
+// }
 
-void save_convolutional_weights_ema(layer l, FILE *fp)
-{
-    if (l.binary) {
-        //save_convolutional_weights_binary(l, fp);
-        //return;
-    }
-#ifdef GPU
-    if (gpu_index >= 0) {
-        pull_convolutional_layer(l);
-    }
-#endif
-    int num = l.nweights;
-    fwrite(l.biases_ema, sizeof(float), l.n, fp);
-    if (l.batch_normalize) {
-        fwrite(l.scales_ema, sizeof(float), l.n, fp);
-        fwrite(l.rolling_mean, sizeof(float), l.n, fp);
-        fwrite(l.rolling_variance, sizeof(float), l.n, fp);
-    }
-    fwrite(l.weights_ema, sizeof(float), num, fp);
-    //if(l.adam){
-    //    fwrite(l.m, sizeof(float), num, fp);
-    //    fwrite(l.v, sizeof(float), num, fp);
-    //}
-}
+// void save_convolutional_weights_ema(layer l, FILE *fp)
+// {
+//     if (l.binary) {
+//         //save_convolutional_weights_binary(l, fp);
+//         //return;
+//     }
+// #ifdef GPU
+//     if (gpu_index >= 0) {
+//         pull_convolutional_layer(l);
+//     }
+// #endif
+//     int num = l.nweights;
+//     fwrite(l.biases_ema, sizeof(float), l.n, fp);
+//     if (l.batch_normalize) {
+//         fwrite(l.scales_ema, sizeof(float), l.n, fp);
+//         fwrite(l.rolling_mean, sizeof(float), l.n, fp);
+//         fwrite(l.rolling_variance, sizeof(float), l.n, fp);
+//     }
+//     fwrite(l.weights_ema, sizeof(float), num, fp);
+//     //if(l.adam){
+//     //    fwrite(l.m, sizeof(float), num, fp);
+//     //    fwrite(l.v, sizeof(float), num, fp);
+//     //}
+// }
 
-void save_batchnorm_weights(layer l, FILE *fp)
-{
-#ifdef GPU
-    if(gpu_index >= 0){
-        pull_batchnorm_layer(l);
-    }
-#endif
-    fwrite(l.biases, sizeof(float), l.c, fp);
-    fwrite(l.scales, sizeof(float), l.c, fp);
-    fwrite(l.rolling_mean, sizeof(float), l.c, fp);
-    fwrite(l.rolling_variance, sizeof(float), l.c, fp);
-}
+// void save_batchnorm_weights(layer l, FILE *fp)
+// {
+// #ifdef GPU
+//     if(gpu_index >= 0){
+//         pull_batchnorm_layer(l);
+//     }
+// #endif
+//     fwrite(l.biases, sizeof(float), l.c, fp);
+//     fwrite(l.scales, sizeof(float), l.c, fp);
+//     fwrite(l.rolling_mean, sizeof(float), l.c, fp);
+//     fwrite(l.rolling_variance, sizeof(float), l.c, fp);
+// }
 
-void save_connected_weights(layer l, FILE *fp)
-{
-#ifdef GPU
-    if(gpu_index >= 0){
-        pull_connected_layer(l);
-    }
-#endif
-    fwrite(l.biases, sizeof(float), l.outputs, fp);
-    fwrite(l.weights, sizeof(float), l.outputs*l.inputs, fp);
-    if (l.batch_normalize){
-        fwrite(l.scales, sizeof(float), l.outputs, fp);
-        fwrite(l.rolling_mean, sizeof(float), l.outputs, fp);
-        fwrite(l.rolling_variance, sizeof(float), l.outputs, fp);
-    }
-}
+// void save_connected_weights(layer l, FILE *fp)
+// {
+// #ifdef GPU
+//     if(gpu_index >= 0){
+//         pull_connected_layer(l);
+//     }
+// #endif
+//     fwrite(l.biases, sizeof(float), l.outputs, fp);
+//     fwrite(l.weights, sizeof(float), l.outputs*l.inputs, fp);
+//     if (l.batch_normalize){
+//         fwrite(l.scales, sizeof(float), l.outputs, fp);
+//         fwrite(l.rolling_mean, sizeof(float), l.outputs, fp);
+//         fwrite(l.rolling_variance, sizeof(float), l.outputs, fp);
+//     }
+// }
 
-void save_weights_upto(network net, char *filename, int cutoff, int save_ema)
-{
-#ifdef GPU
-    if(net.gpu_index >= 0){
-        cuda_set_device(net.gpu_index);
-    }
-#endif
-    fprintf(stderr, "Saving weights to %s\n", filename);
-    FILE *fp = fopen(filename, "wb");
-    if(!fp) file_error(filename);
+// void save_weights_upto(network net, char *filename, int cutoff, int save_ema)
+// {
+// #ifdef GPU
+//     if(net.gpu_index >= 0){
+//         cuda_set_device(net.gpu_index);
+//     }
+// #endif
+//     fprintf(stderr, "Saving weights to %s\n", filename);
+//     FILE *fp = fopen(filename, "wb");
+//     if(!fp) file_error(filename);
 
-    int32_t major = MAJOR_VERSION;
-    int32_t minor = MINOR_VERSION;
-    int32_t revision = PATCH_VERSION;
-    fwrite(&major, sizeof(int32_t), 1, fp);
-    fwrite(&minor, sizeof(int32_t), 1, fp);
-    fwrite(&revision, sizeof(int32_t), 1, fp);
-    (*net.seen) = get_current_iteration(net) * net.batch * net.subdivisions; // remove this line, when you will save to weights-file both: seen & cur_iteration
-    fwrite(net.seen, sizeof(uint64_t), 1, fp);
+//     int32_t major = MAJOR_VERSION;
+//     int32_t minor = MINOR_VERSION;
+//     int32_t revision = PATCH_VERSION;
+//     fwrite(&major, sizeof(int32_t), 1, fp);
+//     fwrite(&minor, sizeof(int32_t), 1, fp);
+//     fwrite(&revision, sizeof(int32_t), 1, fp);
+//     (*net.seen) = get_current_iteration(net) * net.batch * net.subdivisions; // remove this line, when you will save to weights-file both: seen & cur_iteration
+//     fwrite(net.seen, sizeof(uint64_t), 1, fp);
 
-    int i;
-    for(i = 0; i < net.n && i < cutoff; ++i){
-        layer l = net.layers[i];
-        if (l.type == CONVOLUTIONAL && l.share_layer == NULL) {
-            if (save_ema) {
-                save_convolutional_weights_ema(l, fp);
-            }
-            else {
-                save_convolutional_weights(l, fp);
-            }
-        } if (l.type == SHORTCUT && l.nweights > 0) {
-            save_shortcut_weights(l, fp);
-        } if (l.type == IMPLICIT) {
-            save_implicit_weights(l, fp);
-        } if(l.type == CONNECTED){
-            save_connected_weights(l, fp);
-        } if(l.type == BATCHNORM){
-            save_batchnorm_weights(l, fp);
-        } if(l.type == RNN){
-            save_connected_weights(*(l.input_layer), fp);
-            save_connected_weights(*(l.self_layer), fp);
-            save_connected_weights(*(l.output_layer), fp);
-        } if(l.type == GRU){
-            save_connected_weights(*(l.input_z_layer), fp);
-            save_connected_weights(*(l.input_r_layer), fp);
-            save_connected_weights(*(l.input_h_layer), fp);
-            save_connected_weights(*(l.state_z_layer), fp);
-            save_connected_weights(*(l.state_r_layer), fp);
-            save_connected_weights(*(l.state_h_layer), fp);
-        } if(l.type == LSTM){
-            save_connected_weights(*(l.wf), fp);
-            save_connected_weights(*(l.wi), fp);
-            save_connected_weights(*(l.wg), fp);
-            save_connected_weights(*(l.wo), fp);
-            save_connected_weights(*(l.uf), fp);
-            save_connected_weights(*(l.ui), fp);
-            save_connected_weights(*(l.ug), fp);
-            save_connected_weights(*(l.uo), fp);
-        } if (l.type == CONV_LSTM) {
-            if (l.peephole) {
-                save_convolutional_weights(*(l.vf), fp);
-                save_convolutional_weights(*(l.vi), fp);
-                save_convolutional_weights(*(l.vo), fp);
-            }
-            save_convolutional_weights(*(l.wf), fp);
-            if (!l.bottleneck) {
-                save_convolutional_weights(*(l.wi), fp);
-                save_convolutional_weights(*(l.wg), fp);
-                save_convolutional_weights(*(l.wo), fp);
-            }
-            save_convolutional_weights(*(l.uf), fp);
-            save_convolutional_weights(*(l.ui), fp);
-            save_convolutional_weights(*(l.ug), fp);
-            save_convolutional_weights(*(l.uo), fp);
-        } if(l.type == CRNN){
-            save_convolutional_weights(*(l.input_layer), fp);
-            save_convolutional_weights(*(l.self_layer), fp);
-            save_convolutional_weights(*(l.output_layer), fp);
-        } if(l.type == LOCAL){
-#ifdef GPU
-            if(gpu_index >= 0){
-                pull_local_layer(l);
-            }
-#endif
-            int locations = l.out_w*l.out_h;
-            int size = l.size*l.size*l.c*l.n*locations;
-            fwrite(l.biases, sizeof(float), l.outputs, fp);
-            fwrite(l.weights, sizeof(float), size, fp);
-        }
-        fflush(fp);
-    }
-    fclose(fp);
-}
-void save_weights(network net, char *filename)
-{
-    save_weights_upto(net, filename, net.n, 0);
-}
+//     int i;
+//     for(i = 0; i < net.n && i < cutoff; ++i){
+//         layer l = net.layers[i];
+//         if (l.type == CONVOLUTIONAL && l.share_layer == NULL) {
+//             if (save_ema) {
+//                 save_convolutional_weights_ema(l, fp);
+//             }
+//             else {
+//                 save_convolutional_weights(l, fp);
+//             }
+//         } if (l.type == SHORTCUT && l.nweights > 0) {
+//             save_shortcut_weights(l, fp);
+//         } if (l.type == IMPLICIT) {
+//             save_implicit_weights(l, fp);
+//         } if(l.type == CONNECTED){
+//             save_connected_weights(l, fp);
+//         } if(l.type == BATCHNORM){
+//             save_batchnorm_weights(l, fp);
+//         } if(l.type == RNN){
+//             save_connected_weights(*(l.input_layer), fp);
+//             save_connected_weights(*(l.self_layer), fp);
+//             save_connected_weights(*(l.output_layer), fp);
+//         } if(l.type == GRU){
+//             save_connected_weights(*(l.input_z_layer), fp);
+//             save_connected_weights(*(l.input_r_layer), fp);
+//             save_connected_weights(*(l.input_h_layer), fp);
+//             save_connected_weights(*(l.state_z_layer), fp);
+//             save_connected_weights(*(l.state_r_layer), fp);
+//             save_connected_weights(*(l.state_h_layer), fp);
+//         } if(l.type == LSTM){
+//             save_connected_weights(*(l.wf), fp);
+//             save_connected_weights(*(l.wi), fp);
+//             save_connected_weights(*(l.wg), fp);
+//             save_connected_weights(*(l.wo), fp);
+//             save_connected_weights(*(l.uf), fp);
+//             save_connected_weights(*(l.ui), fp);
+//             save_connected_weights(*(l.ug), fp);
+//             save_connected_weights(*(l.uo), fp);
+//         } if (l.type == CONV_LSTM) {
+//             if (l.peephole) {
+//                 save_convolutional_weights(*(l.vf), fp);
+//                 save_convolutional_weights(*(l.vi), fp);
+//                 save_convolutional_weights(*(l.vo), fp);
+//             }
+//             save_convolutional_weights(*(l.wf), fp);
+//             if (!l.bottleneck) {
+//                 save_convolutional_weights(*(l.wi), fp);
+//                 save_convolutional_weights(*(l.wg), fp);
+//                 save_convolutional_weights(*(l.wo), fp);
+//             }
+//             save_convolutional_weights(*(l.uf), fp);
+//             save_convolutional_weights(*(l.ui), fp);
+//             save_convolutional_weights(*(l.ug), fp);
+//             save_convolutional_weights(*(l.uo), fp);
+//         } if(l.type == CRNN){
+//             save_convolutional_weights(*(l.input_layer), fp);
+//             save_convolutional_weights(*(l.self_layer), fp);
+//             save_convolutional_weights(*(l.output_layer), fp);
+//         } if(l.type == LOCAL){
+// #ifdef GPU
+//             if(gpu_index >= 0){
+//                 pull_local_layer(l);
+//             }
+// #endif
+//             int locations = l.out_w*l.out_h;
+//             int size = l.size*l.size*l.c*l.n*locations;
+//             fwrite(l.biases, sizeof(float), l.outputs, fp);
+//             fwrite(l.weights, sizeof(float), size, fp);
+//         }
+//         fflush(fp);
+//     }
+//     fclose(fp);
+// }
+// void save_weights(network net, char *filename)
+// {
+//     save_weights_upto(net, filename, net.n, 0);
+// }
 
 void transpose_matrix(float *a, int rows, int cols)
 {
@@ -2102,72 +2102,72 @@ void transpose_matrix(float *a, int rows, int cols)
     free(transpose);
 }
 
-void load_connected_weights(layer l, FILE *fp, int transpose)
-{
-    fread(l.biases, sizeof(float), l.outputs, fp);
-    fread(l.weights, sizeof(float), l.outputs*l.inputs, fp);
-    if(transpose){
-        transpose_matrix(l.weights, l.inputs, l.outputs);
-    }
-    //printf("Biases: %f mean %f variance\n", mean_array(l.biases, l.outputs), variance_array(l.biases, l.outputs));
-    //printf("Weights: %f mean %f variance\n", mean_array(l.weights, l.outputs*l.inputs), variance_array(l.weights, l.outputs*l.inputs));
-    if (l.batch_normalize && (!l.dontloadscales)){
-        fread(l.scales, sizeof(float), l.outputs, fp);
-        fread(l.rolling_mean, sizeof(float), l.outputs, fp);
-        fread(l.rolling_variance, sizeof(float), l.outputs, fp);
-        //printf("Scales: %f mean %f variance\n", mean_array(l.scales, l.outputs), variance_array(l.scales, l.outputs));
-        //printf("rolling_mean: %f mean %f variance\n", mean_array(l.rolling_mean, l.outputs), variance_array(l.rolling_mean, l.outputs));
-        //printf("rolling_variance: %f mean %f variance\n", mean_array(l.rolling_variance, l.outputs), variance_array(l.rolling_variance, l.outputs));
-    }
-#ifdef GPU
-    if(gpu_index >= 0){
-        push_connected_layer(l);
-    }
-#endif
-}
+// void load_connected_weights(layer l, FILE *fp, int transpose)
+// {
+//     fread(l.biases, sizeof(float), l.outputs, fp);
+//     fread(l.weights, sizeof(float), l.outputs*l.inputs, fp);
+//     if(transpose){
+//         transpose_matrix(l.weights, l.inputs, l.outputs);
+//     }
+//     //printf("Biases: %f mean %f variance\n", mean_array(l.biases, l.outputs), variance_array(l.biases, l.outputs));
+//     //printf("Weights: %f mean %f variance\n", mean_array(l.weights, l.outputs*l.inputs), variance_array(l.weights, l.outputs*l.inputs));
+//     if (l.batch_normalize && (!l.dontloadscales)){
+//         fread(l.scales, sizeof(float), l.outputs, fp);
+//         fread(l.rolling_mean, sizeof(float), l.outputs, fp);
+//         fread(l.rolling_variance, sizeof(float), l.outputs, fp);
+//         //printf("Scales: %f mean %f variance\n", mean_array(l.scales, l.outputs), variance_array(l.scales, l.outputs));
+//         //printf("rolling_mean: %f mean %f variance\n", mean_array(l.rolling_mean, l.outputs), variance_array(l.rolling_mean, l.outputs));
+//         //printf("rolling_variance: %f mean %f variance\n", mean_array(l.rolling_variance, l.outputs), variance_array(l.rolling_variance, l.outputs));
+//     }
+// #ifdef GPU
+//     if(gpu_index >= 0){
+//         push_connected_layer(l);
+//     }
+// #endif
+// }
 
-void load_batchnorm_weights(layer l, FILE *fp)
-{
-    fread(l.biases, sizeof(float), l.c, fp);
-    fread(l.scales, sizeof(float), l.c, fp);
-    fread(l.rolling_mean, sizeof(float), l.c, fp);
-    fread(l.rolling_variance, sizeof(float), l.c, fp);
-#ifdef GPU
-    if(gpu_index >= 0){
-        push_batchnorm_layer(l);
-    }
-#endif
-}
+// void load_batchnorm_weights(layer l, FILE *fp)
+// {
+//     fread(l.biases, sizeof(float), l.c, fp);
+//     fread(l.scales, sizeof(float), l.c, fp);
+//     fread(l.rolling_mean, sizeof(float), l.c, fp);
+//     fread(l.rolling_variance, sizeof(float), l.c, fp);
+// #ifdef GPU
+//     if(gpu_index >= 0){
+//         push_batchnorm_layer(l);
+//     }
+// #endif
+// }
 
-void load_convolutional_weights_binary(layer l, FILE *fp)
-{
-    fread(l.biases, sizeof(float), l.n, fp);
-    if (l.batch_normalize && (!l.dontloadscales)){
-        fread(l.scales, sizeof(float), l.n, fp);
-        fread(l.rolling_mean, sizeof(float), l.n, fp);
-        fread(l.rolling_variance, sizeof(float), l.n, fp);
-    }
-    int size = (l.c / l.groups)*l.size*l.size;
-    int i, j, k;
-    for(i = 0; i < l.n; ++i){
-        float mean = 0;
-        fread(&mean, sizeof(float), 1, fp);
-        for(j = 0; j < size/8; ++j){
-            int index = i*size + j*8;
-            unsigned char c = 0;
-            fread(&c, sizeof(char), 1, fp);
-            for(k = 0; k < 8; ++k){
-                if (j*8 + k >= size) break;
-                l.weights[index + k] = (c & 1<<k) ? mean : -mean;
-            }
-        }
-    }
-#ifdef GPU
-    if(gpu_index >= 0){
-        push_convolutional_layer(l);
-    }
-#endif
-}
+// void load_convolutional_weights_binary(layer l, FILE *fp)
+// {
+//     fread(l.biases, sizeof(float), l.n, fp);
+//     if (l.batch_normalize && (!l.dontloadscales)){
+//         fread(l.scales, sizeof(float), l.n, fp);
+//         fread(l.rolling_mean, sizeof(float), l.n, fp);
+//         fread(l.rolling_variance, sizeof(float), l.n, fp);
+//     }
+//     int size = (l.c / l.groups)*l.size*l.size;
+//     int i, j, k;
+//     for(i = 0; i < l.n; ++i){
+//         float mean = 0;
+//         fread(&mean, sizeof(float), 1, fp);
+//         for(j = 0; j < size/8; ++j){
+//             int index = i*size + j*8;
+//             unsigned char c = 0;
+//             fread(&c, sizeof(char), 1, fp);
+//             for(k = 0; k < 8; ++k){
+//                 if (j*8 + k >= size) break;
+//                 l.weights[index + k] = (c & 1<<k) ? mean : -mean;
+//             }
+//         }
+//     }
+// #ifdef GPU
+//     if(gpu_index >= 0){
+//         push_convolutional_layer(l);
+//     }
+// #endif
+// }
 
 void load_convolutional_weights(layer l, FILE *fp)
 {
@@ -2221,35 +2221,35 @@ void load_convolutional_weights(layer l, FILE *fp)
 #endif
 }
 
-void load_shortcut_weights(layer l, FILE *fp)
-{
-    int num = l.nweights;
-    int read_bytes;
-    read_bytes = fread(l.weights, sizeof(float), num, fp);
-    if (read_bytes > 0 && read_bytes < num) printf("\n Warning: Unexpected end of wights-file! l.weights - l.index = %d \n", l.index);
-    //for (int i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
-    //printf(" read_bytes = %d \n\n", read_bytes);
-#ifdef GPU
-    if (gpu_index >= 0) {
-        push_shortcut_layer(l);
-    }
-#endif
-}
+// void load_shortcut_weights(layer l, FILE *fp)
+// {
+//     int num = l.nweights;
+//     int read_bytes;
+//     read_bytes = fread(l.weights, sizeof(float), num, fp);
+//     if (read_bytes > 0 && read_bytes < num) printf("\n Warning: Unexpected end of wights-file! l.weights - l.index = %d \n", l.index);
+//     //for (int i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
+//     //printf(" read_bytes = %d \n\n", read_bytes);
+// #ifdef GPU
+//     if (gpu_index >= 0) {
+//         push_shortcut_layer(l);
+//     }
+// #endif
+// }
 
-void load_implicit_weights(layer l, FILE *fp)
-{
-    int num = l.nweights;
-    int read_bytes;
-    read_bytes = fread(l.weights, sizeof(float), num, fp);
-    if (read_bytes > 0 && read_bytes < num) printf("\n Warning: Unexpected end of wights-file! l.weights - l.index = %d \n", l.index);
-    //for (int i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
-    //printf(" read_bytes = %d \n\n", read_bytes);
-#ifdef GPU
-    if (gpu_index >= 0) {
-        push_implicit_layer(l);
-    }
-#endif
-}
+// void load_implicit_weights(layer l, FILE *fp)
+// {
+//     int num = l.nweights;
+//     int read_bytes;
+//     read_bytes = fread(l.weights, sizeof(float), num, fp);
+//     if (read_bytes > 0 && read_bytes < num) printf("\n Warning: Unexpected end of wights-file! l.weights - l.index = %d \n", l.index);
+//     //for (int i = 0; i < l.nweights; ++i) printf(" %f, ", l.weights[i]);
+//     //printf(" read_bytes = %d \n\n", read_bytes);
+// #ifdef GPU
+//     if (gpu_index >= 0) {
+//         push_implicit_layer(l);
+//     }
+// #endif
+// }
 
 void load_weights_upto(network *net, char *filename, int cutoff)
 {
