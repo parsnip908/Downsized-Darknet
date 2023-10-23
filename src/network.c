@@ -510,9 +510,9 @@ int recalculate_workspace_size(network *net)
         if (l.type == CONVOLUTIONAL) {
             l.workspace_size = get_convolutional_workspace_size(l);
         }
-        else if (l.type == CONNECTED) {
-            l.workspace_size = get_connected_workspace_size(l);
-        }
+        // else if (l.type == CONNECTED) {
+        //     l.workspace_size = get_connected_workspace_size(l);
+        // }
         if (l.workspace_size > workspace_size) workspace_size = l.workspace_size;
         net->layers[i] = l;
     }
@@ -589,55 +589,64 @@ int resize_network(network *net, int w, int h)
         if(l.type == CONVOLUTIONAL){
             resize_convolutional_layer(&l, w, h);
         }
-        else if (l.type == CRNN) {
-            resize_crnn_layer(&l, w, h);
-        }else if (l.type == CONV_LSTM) {
-            resize_conv_lstm_layer(&l, w, h);
-        }else if(l.type == CROP){
-            resize_crop_layer(&l, w, h);
-        }else if(l.type == MAXPOOL){
+        // else if (l.type == CRNN) {
+        //     resize_crnn_layer(&l, w, h);
+        // }else if (l.type == CONV_LSTM) {
+        //     resize_conv_lstm_layer(&l, w, h);
+        // }else if(l.type == CROP){
+        //     resize_crop_layer(&l, w, h);
+        // }
+        else if(l.type == MAXPOOL){
             resize_maxpool_layer(&l, w, h);
-        }else if (l.type == LOCAL_AVGPOOL) {
-            resize_maxpool_layer(&l, w, h);
-        }else if (l.type == BATCHNORM) {
-            resize_batchnorm_layer(&l, w, h);
-        }else if(l.type == REGION){
-            resize_region_layer(&l, w, h);
-        }else if (l.type == YOLO) {
+        }
+        // else if (l.type == LOCAL_AVGPOOL) {
+        //     resize_maxpool_layer(&l, w, h);
+        // }else if (l.type == BATCHNORM) {
+        //     resize_batchnorm_layer(&l, w, h);
+        // }else if(l.type == REGION){
+        //     resize_region_layer(&l, w, h);
+        // }
+        else if (l.type == YOLO) {
             resize_yolo_layer(&l, w, h);
-        }else if (l.type == GAUSSIAN_YOLO) {
-            resize_gaussian_yolo_layer(&l, w, h);
-        }else if(l.type == ROUTE){
+        }
+        // else if (l.type == GAUSSIAN_YOLO) {
+        //     resize_gaussian_yolo_layer(&l, w, h);
+        // }
+        else if(l.type == ROUTE){
             resize_route_layer(&l, net);
-        }else if (l.type == SHORTCUT) {
-            resize_shortcut_layer(&l, w, h, net);
-        }else if (l.type == SCALE_CHANNELS) {
-            resize_scale_channels_layer(&l, net);
-        }else if (l.type == SAM) {
-            resize_sam_layer(&l, w, h);
-        }else if (l.type == DROPOUT) {
-            resize_dropout_layer(&l, inputs);
-            l.out_w = l.w = w;
-            l.out_h = l.h = h;
-            l.output = net->layers[i - 1].output;
-            l.delta = net->layers[i - 1].delta;
-#ifdef GPU
-            l.output_gpu = net->layers[i-1].output_gpu;
-            l.delta_gpu = net->layers[i-1].delta_gpu;
-#endif
-        }else if (l.type == UPSAMPLE) {
+        }
+//         else if (l.type == SHORTCUT) {
+//             resize_shortcut_layer(&l, w, h, net);
+//         }else if (l.type == SCALE_CHANNELS) {
+//             resize_scale_channels_layer(&l, net);
+//         }else if (l.type == SAM) {
+//             resize_sam_layer(&l, w, h);
+//         }else if (l.type == DROPOUT) {
+//             resize_dropout_layer(&l, inputs);
+//             l.out_w = l.w = w;
+//             l.out_h = l.h = h;
+//             l.output = net->layers[i - 1].output;
+//             l.delta = net->layers[i - 1].delta;
+// #ifdef GPU
+//             l.output_gpu = net->layers[i-1].output_gpu;
+//             l.delta_gpu = net->layers[i-1].delta_gpu;
+// #endif
+//         }
+        else if (l.type == UPSAMPLE) {
             resize_upsample_layer(&l, w, h);
-        }else if(l.type == REORG){
-            resize_reorg_layer(&l, w, h);
-        } else if (l.type == REORG_OLD) {
-            resize_reorg_old_layer(&l, w, h);
-        }else if(l.type == AVGPOOL){
-            resize_avgpool_layer(&l, w, h);
-        }else if(l.type == NORMALIZATION){
-            resize_normalization_layer(&l, w, h);
-        }else if(l.type == COST){
-            resize_cost_layer(&l, inputs);
-        }else{
+        }
+        // else if(l.type == REORG){
+        //     resize_reorg_layer(&l, w, h);
+        // } else if (l.type == REORG_OLD) {
+        //     resize_reorg_old_layer(&l, w, h);
+        // }else if(l.type == AVGPOOL){
+        //     resize_avgpool_layer(&l, w, h);
+        // }else if(l.type == NORMALIZATION){
+        //     resize_normalization_layer(&l, w, h);
+        // }else if(l.type == COST){
+        //     resize_cost_layer(&l, inputs);
+        // }
+        else{
             fprintf(stderr, "Resizing type %d \n", (int)l.type);
             error("Cannot resize this type of layer", DARKNET_LOC);
         }
@@ -800,12 +809,12 @@ int num_detections(network *net, float thresh)
         if (l.type == YOLO) {
             s += yolo_num_detections(l, thresh);
         }
-        if (l.type == GAUSSIAN_YOLO) {
-            s += gaussian_yolo_num_detections(l, thresh);
-        }
-        if (l.type == DETECTION || l.type == REGION) {
-            s += l.w*l.h*l.n;
-        }
+        // if (l.type == GAUSSIAN_YOLO) {
+        //     s += gaussian_yolo_num_detections(l, thresh);
+        // }
+        // if (l.type == DETECTION || l.type == REGION) {
+        //     s += l.w*l.h*l.n;
+        // }
     }
     return s;
 }
@@ -889,34 +898,34 @@ detection *make_network_boxes_batch(network *net, float thresh, int *num, int ba
     return dets;
 }
 
-void custom_get_region_detections(layer l, int w, int h, int net_w, int net_h, float thresh, int *map, float hier, int relative, detection *dets, int letter)
-{
-    box* boxes = (box*)xcalloc(l.w * l.h * l.n, sizeof(box));
-    float** probs = (float**)xcalloc(l.w * l.h * l.n, sizeof(float*));
-    int i, j;
-    for (j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float*)xcalloc(l.classes, sizeof(float));
-    get_region_boxes(l, 1, 1, thresh, probs, boxes, 0, map);
-    for (j = 0; j < l.w*l.h*l.n; ++j) {
-        dets[j].classes = l.classes;
-        dets[j].bbox = boxes[j];
-        dets[j].objectness = 1;
-        float highest_prob = 0;
-        dets[j].best_class_idx = -1;
-        for (i = 0; i < l.classes; ++i) {
-            if (probs[j][i] > highest_prob) {
-                highest_prob = probs[j][i];
-                dets[j].best_class_idx = i;
-            }
-            dets[j].prob[i] = probs[j][i];
-        }
-    }
+// void custom_get_region_detections(layer l, int w, int h, int net_w, int net_h, float thresh, int *map, float hier, int relative, detection *dets, int letter)
+// {
+//     box* boxes = (box*)xcalloc(l.w * l.h * l.n, sizeof(box));
+//     float** probs = (float**)xcalloc(l.w * l.h * l.n, sizeof(float*));
+//     int i, j;
+//     for (j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float*)xcalloc(l.classes, sizeof(float));
+//     get_region_boxes(l, 1, 1, thresh, probs, boxes, 0, map);
+//     for (j = 0; j < l.w*l.h*l.n; ++j) {
+//         dets[j].classes = l.classes;
+//         dets[j].bbox = boxes[j];
+//         dets[j].objectness = 1;
+//         float highest_prob = 0;
+//         dets[j].best_class_idx = -1;
+//         for (i = 0; i < l.classes; ++i) {
+//             if (probs[j][i] > highest_prob) {
+//                 highest_prob = probs[j][i];
+//                 dets[j].best_class_idx = i;
+//             }
+//             dets[j].prob[i] = probs[j][i];
+//         }
+//     }
 
-    free(boxes);
-    free_ptrs((void **)probs, l.w*l.h*l.n);
+//     free(boxes);
+//     free_ptrs((void **)probs, l.w*l.h*l.n);
 
-    //correct_region_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative);
-    correct_yolo_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative, letter);
-}
+//     //correct_region_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative);
+//     correct_yolo_boxes(dets, l.w*l.h*l.n, w, h, net_w, net_h, relative, letter);
+// }
 
 void fill_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, detection *dets, int letter)
 {
@@ -933,19 +942,19 @@ void fill_network_boxes(network *net, int w, int h, float thresh, float hier, in
                     prev_classes, l.classes);
             }
         }
-        if (l.type == GAUSSIAN_YOLO) {
-            int count = get_gaussian_yolo_detections(l, w, h, net->w, net->h, thresh, map, relative, dets, letter);
-            dets += count;
-        }
-        if (l.type == REGION) {
-            custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
-            //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
-            dets += l.w*l.h*l.n;
-        }
-        if (l.type == DETECTION) {
-            get_detection_detections(l, w, h, thresh, dets);
-            dets += l.w*l.h*l.n;
-        }
+        // if (l.type == GAUSSIAN_YOLO) {
+        //     int count = get_gaussian_yolo_detections(l, w, h, net->w, net->h, thresh, map, relative, dets, letter);
+        //     dets += count;
+        // }
+        // if (l.type == REGION) {
+        //     custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
+        //     //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
+        //     dets += l.w*l.h*l.n;
+        // }
+        // if (l.type == DETECTION) {
+        //     get_detection_detections(l, w, h, thresh, dets);
+        //     dets += l.w*l.h*l.n;
+        // }
     }
 }
 
@@ -964,15 +973,15 @@ void fill_network_boxes_batch(network *net, int w, int h, float thresh, float hi
                     prev_classes, l.classes);
             }
         }
-        if (l.type == REGION) {
-            custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
-            //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
-            dets += l.w*l.h*l.n;
-        }
-        if (l.type == DETECTION) {
-            get_detection_detections(l, w, h, thresh, dets);
-            dets += l.w*l.h*l.n;
-        }
+        // if (l.type == REGION) {
+        //     custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
+        //     //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
+        //     dets += l.w*l.h*l.n;
+        // }
+        // if (l.type == DETECTION) {
+        //     get_detection_detections(l, w, h, thresh, dets);
+        //     dets += l.w*l.h*l.n;
+        // }
     }
 }
 
@@ -1517,42 +1526,42 @@ network combine_train_valid_networks(network net_train, network net_map)
     return net_combined;
 }
 
-void free_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) free_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void free_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) free_state_conv_lstm(net.layers[k]);
+//         if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
-void randomize_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) randomize_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void randomize_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) randomize_state_conv_lstm(net.layers[k]);
+//         if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
 
-void remember_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) remember_state_conv_lstm(net.layers[k]);
-        //if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void remember_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) remember_state_conv_lstm(net.layers[k]);
+//         //if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
-void restore_network_recurrent_state(network net)
-{
-    int k;
-    for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) restore_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
-    }
-}
+// void restore_network_recurrent_state(network net)
+// {
+//     int k;
+//     for (k = 0; k < net.n; ++k) {
+//         if (net.layers[k].type == CONV_LSTM) restore_state_conv_lstm(net.layers[k]);
+//         if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+//     }
+// }
 
 
 int is_ema_initialized(network net)
