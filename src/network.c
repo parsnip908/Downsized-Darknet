@@ -57,10 +57,10 @@
 //     return args;
 // }
 
-// int64_t get_current_iteration(network net)
-// {
-//     return *net.cur_iteration;
-// }
+int64_t get_current_iteration(network net)
+{
+    return *net.cur_iteration;
+}
 
 int get_current_batch(network net)
 {
