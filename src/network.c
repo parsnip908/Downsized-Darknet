@@ -39,28 +39,28 @@
 #include "upsample_layer.h"
 #include "parser.h"
 
-load_args get_base_args(network *net)
-{
-    load_args args = { 0 };
-    args.w = net->w;
-    args.h = net->h;
-    args.size = net->w;
+// load_args get_base_args(network *net)
+// {
+//     load_args args = { 0 };
+//     args.w = net->w;
+//     args.h = net->h;
+//     args.size = net->w;
 
-    args.min = net->min_crop;
-    args.max = net->max_crop;
-    args.angle = net->angle;
-    args.aspect = net->aspect;
-    args.exposure = net->exposure;
-    args.center = net->center;
-    args.saturation = net->saturation;
-    args.hue = net->hue;
-    return args;
-}
+//     args.min = net->min_crop;
+//     args.max = net->max_crop;
+//     args.angle = net->angle;
+//     args.aspect = net->aspect;
+//     args.exposure = net->exposure;
+//     args.center = net->center;
+//     args.saturation = net->saturation;
+//     args.hue = net->hue;
+//     return args;
+// }
 
-int64_t get_current_iteration(network net)
-{
-    return *net.cur_iteration;
-}
+// int64_t get_current_iteration(network net)
+// {
+//     return *net.cur_iteration;
+// }
 
 int get_current_batch(network net)
 {
