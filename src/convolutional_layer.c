@@ -1129,14 +1129,14 @@ void binary_align_weights(convolutional_layer *l)
         float_to_bit(align_weights, (unsigned char*)l->align_bit_weights, align_weights_size);
 
         //if (l->n >= 32)
-        if(gpu_index >= 0)
-        {
-            //int M = l->n;
-            //int N = l->out_w*l->out_h;
-            //printf("\n M = %d, N = %d, M %% 8 = %d, N %% 8 = %d - weights \n", M, N, M % 8, N % 8);
-            //printf("\n l.w = %d, l.c = %d, l.n = %d \n", l->w, l->c, l->n);
-            for (i = 0; i < align_weights_size / 8; ++i) l->align_bit_weights[i] = ~(l->align_bit_weights[i]);
-        }
+        // if(gpu_index >= 0)
+        // {
+        //     //int M = l->n;
+        //     //int N = l->out_w*l->out_h;
+        //     //printf("\n M = %d, N = %d, M %% 8 = %d, N %% 8 = %d - weights \n", M, N, M % 8, N % 8);
+        //     //printf("\n l.w = %d, l.c = %d, l.n = %d \n", l->w, l->c, l->n);
+        //     for (i = 0; i < align_weights_size / 8; ++i) l->align_bit_weights[i] = ~(l->align_bit_weights[i]);
+        // }
 
 
 

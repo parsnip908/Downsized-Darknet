@@ -2004,7 +2004,7 @@ void run_detector(int argc, char **argv)
         }
     }
     else {
-        gpu = gpu_index;
+        gpu = 0; // modified
         gpus = &gpu;
         ngpus = 1;
     }
