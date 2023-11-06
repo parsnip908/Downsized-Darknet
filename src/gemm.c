@@ -1983,7 +1983,7 @@ void gemm_nn(int M, int N, int K, float ALPHA,
     }
 }
 
-void gemm_fixed(int TB, int M, int N, int K,
+void gemm_fixed(int M, int N, int K,
     fixed_t *A, fixed_t *B, fixed_t *C)
 {
     int i, j, k;

@@ -1395,7 +1395,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
                 arr_float_to_fixed(a, A_fixed, m * k);
                 arr_float_to_fixed(b, B_fixed, n * k);
 
-                gemm_fixed(0, m, n, k, A_fixed, B_fixed, C_fixed);
+                gemm_fixed(m, n, k, A_fixed, B_fixed, C_fixed);
 
                 arr_fixed_to_float(C_fixed, c, m * n);
 

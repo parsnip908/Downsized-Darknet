@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #define QBITS 24
+#define INTSIZE 32
 #define fixed_t int32_t
 
 // Convert float to fixed_t
@@ -11,19 +12,13 @@ inline fixed_t float_to_fixed(float fp)
     return (fixed_t)(fp * (1 << QBITS));
 }
 
-// Shift by n qbits
-// inline fixed_t qshift(fixed_t fixed_num, int n)
-// {
-//     return fixed_num >> (n * QBITS);
-// }
-
 // Use this any time you want to multiply two fixed_t
 inline fixed_t fixed_mul(fixed_t a, fixed_t b)
 {
-    // return (fixed_t) (((int64_t)a * (int64_t)b) >> QBITS); //for arbitrary qbits
-    // return (a * b) >> QBITS; //qbits <=12
-    // return ((a>>8) * (b>>8)) >> 4; // for 20 qbits. inexact mult
-    return (a>>(QBITS/2)) * (b>>(QBITS/2)); // for 24 qbits. inexact mult
+    // return (fixed_t) (((int64_t)a * (int64_t)b) >> QBITS);   // QBITS <= INTSIZE-8    exact
+    // return (a * b) >> QBITS;                                 // 2*QBITS <= INTSIZE-8  exact
+    // return ((a>>8) * (b>>8)) >> 4;                           // QBITS == 20           approx
+    return (a>>(QBITS/2)) * (b>>(QBITS/2));                     // QBITS <= INTSIZE-8    approx
 }
 
 // Convert fixed_t number back to float
