@@ -1,6 +1,7 @@
 #ifndef GEMM_H
 #define GEMM_H
 #include "activations.h"
+#include "fixed.h"
 #include <stdint.h>
 #include <stddef.h>
 #ifdef __cplusplus
@@ -93,6 +94,9 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
                     float *B, int ldb,
                     float BETA,
                     float *C, int ldc);
+
+void gemm_fixed(int TB, int M, int N, int K,
+    fixed_t *A, fixed_t *B, fixed_t *C);
 
 void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
         float *A, int lda,
