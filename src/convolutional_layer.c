@@ -589,8 +589,8 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
 #endif  // not GPU
 
     l.forward = forward_convolutional_layer;
-    l.backward = backward_convolutional_layer;
-    l.update = update_convolutional_layer;
+    l.backward = NULL; //backward_convolutional_layer;
+    l.update = NULL; //update_convolutional_layer;
     if(binary){
         l.binary_weights = (float*)xcalloc(l.nweights, sizeof(float));
         l.cweights = (char*)xcalloc(l.nweights, sizeof(char));
@@ -1446,6 +1446,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     // }
 }
 
+/*
 void assisted_excitation_forward(convolutional_layer l, network_state state)
 {
     const int iteration_num = (*state.net.seen) / (state.net.batch*state.net.subdivisions);
@@ -1640,7 +1641,7 @@ void update_convolutional_layer(convolutional_layer l, int batch, float learning
         scal_cpu(l.n, momentum, l.scale_updates, 1);
     }
 }
-
+*/
 
 
 // image get_convolutional_weight(convolutional_layer l, int i)
