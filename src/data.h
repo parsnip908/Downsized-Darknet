@@ -4,13 +4,13 @@
 
 #include "darknet.h"
 #include "darknet.h"
-#include "matrix.h"
+// #include "matrix.h"
 #include "list.h"
 #include "image.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "tree.h"
+// #include "tree.h"
 
 static inline float distance_from_edge(int x, int max)
 {

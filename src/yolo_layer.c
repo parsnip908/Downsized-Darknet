@@ -2,7 +2,7 @@
 #include "activations.h"
 #include "blas.h"
 #include "box.h"
-#include "dark_cuda.h"
+// #include "dark_cuda.h"
 #include "utils.h"
 
 #include <math.h>
@@ -83,49 +83,49 @@ layer make_yolo_layer(int batch, int w, int h, int n, int total, int *mask, int 
     return l;
 }
 
-void resize_yolo_layer(layer *l, int w, int h)
-{
-    l->w = w;
-    l->h = h;
+// void resize_yolo_layer(layer *l, int w, int h)
+// {
+//     l->w = w;
+//     l->h = h;
 
-    l->outputs = h*w*l->n*(l->classes + 4 + 1);
-    l->inputs = l->outputs;
+//     l->outputs = h*w*l->n*(l->classes + 4 + 1);
+//     l->inputs = l->outputs;
 
-    if (l->embedding_output) l->embedding_output = (float*)xrealloc(l->output, l->batch * l->embedding_size * l->n * l->h * l->w * sizeof(float));
-    if (l->labels) l->labels = (int*)xrealloc(l->labels, l->batch * l->n * l->h * l->w * sizeof(int));
-    if (l->class_ids) l->class_ids = (int*)xrealloc(l->class_ids, l->batch * l->n * l->h * l->w * sizeof(int));
+//     if (l->embedding_output) l->embedding_output = (float*)xrealloc(l->output, l->batch * l->embedding_size * l->n * l->h * l->w * sizeof(float));
+//     if (l->labels) l->labels = (int*)xrealloc(l->labels, l->batch * l->n * l->h * l->w * sizeof(int));
+//     if (l->class_ids) l->class_ids = (int*)xrealloc(l->class_ids, l->batch * l->n * l->h * l->w * sizeof(int));
 
-    if (!l->output_pinned) l->output = (float*)xrealloc(l->output, l->batch*l->outputs * sizeof(float));
-    if (!l->delta_pinned) l->delta = (float*)xrealloc(l->delta, l->batch*l->outputs*sizeof(float));
+//     if (!l->output_pinned) l->output = (float*)xrealloc(l->output, l->batch*l->outputs * sizeof(float));
+//     if (!l->delta_pinned) l->delta = (float*)xrealloc(l->delta, l->batch*l->outputs*sizeof(float));
 
-#ifdef GPU
-    if (l->output_pinned) {
-        CHECK_CUDA(cudaFreeHost(l->output));
-        if (cudaSuccess != cudaHostAlloc(&l->output, l->batch*l->outputs * sizeof(float), cudaHostRegisterMapped)) {
-            cudaGetLastError(); // reset CUDA-error
-            l->output = (float*)xcalloc(l->batch * l->outputs, sizeof(float));
-            l->output_pinned = 0;
-        }
-    }
+// #ifdef GPU
+//     if (l->output_pinned) {
+//         CHECK_CUDA(cudaFreeHost(l->output));
+//         if (cudaSuccess != cudaHostAlloc(&l->output, l->batch*l->outputs * sizeof(float), cudaHostRegisterMapped)) {
+//             cudaGetLastError(); // reset CUDA-error
+//             l->output = (float*)xcalloc(l->batch * l->outputs, sizeof(float));
+//             l->output_pinned = 0;
+//         }
+//     }
 
-    if (l->delta_pinned) {
-        CHECK_CUDA(cudaFreeHost(l->delta));
-        if (cudaSuccess != cudaHostAlloc(&l->delta, l->batch*l->outputs * sizeof(float), cudaHostRegisterMapped)) {
-            cudaGetLastError(); // reset CUDA-error
-            l->delta = (float*)xcalloc(l->batch * l->outputs, sizeof(float));
-            l->delta_pinned = 0;
-        }
-    }
+//     if (l->delta_pinned) {
+//         CHECK_CUDA(cudaFreeHost(l->delta));
+//         if (cudaSuccess != cudaHostAlloc(&l->delta, l->batch*l->outputs * sizeof(float), cudaHostRegisterMapped)) {
+//             cudaGetLastError(); // reset CUDA-error
+//             l->delta = (float*)xcalloc(l->batch * l->outputs, sizeof(float));
+//             l->delta_pinned = 0;
+//         }
+//     }
 
-    cuda_free(l->delta_gpu);
-    cuda_free(l->output_gpu);
-    cuda_free(l->output_avg_gpu);
+//     cuda_free(l->delta_gpu);
+//     cuda_free(l->output_gpu);
+//     cuda_free(l->output_avg_gpu);
 
-    l->delta_gpu =     cuda_make_array(l->delta, l->batch*l->outputs);
-    l->output_gpu =    cuda_make_array(l->output, l->batch*l->outputs);
-    l->output_avg_gpu = cuda_make_array(l->output, l->batch*l->outputs);
-#endif
-}
+//     l->delta_gpu =     cuda_make_array(l->delta, l->batch*l->outputs);
+//     l->output_gpu =    cuda_make_array(l->output, l->batch*l->outputs);
+//     l->output_avg_gpu = cuda_make_array(l->output, l->batch*l->outputs);
+// #endif
+// }
 
 box get_yolo_box(float *x, float *biases, int n, int index, int i, int j, int lw, int lh, int w, int h, int stride, int new_coords)
 {
@@ -1042,46 +1042,46 @@ int yolo_num_detections(layer l, float thresh)
     return count;
 }
 
-int yolo_num_detections_batch(layer l, float thresh, int batch)
-{
-    int i, n;
-    int count = 0;
-    for (i = 0; i < l.w*l.h; ++i){
-        for(n = 0; n < l.n; ++n){
-            int obj_index  = entry_index(l, batch, n*l.w*l.h + i, 4);
-            if(l.output[obj_index] > thresh){
-                ++count;
-            }
-        }
-    }
-    return count;
-}
+// int yolo_num_detections_batch(layer l, float thresh, int batch)
+// {
+//     int i, n;
+//     int count = 0;
+//     for (i = 0; i < l.w*l.h; ++i){
+//         for(n = 0; n < l.n; ++n){
+//             int obj_index  = entry_index(l, batch, n*l.w*l.h + i, 4);
+//             if(l.output[obj_index] > thresh){
+//                 ++count;
+//             }
+//         }
+//     }
+//     return count;
+// }
 
-void avg_flipped_yolo(layer l)
-{
-    int i,j,n,z;
-    float *flip = l.output + l.outputs;
-    for (j = 0; j < l.h; ++j) {
-        for (i = 0; i < l.w/2; ++i) {
-            for (n = 0; n < l.n; ++n) {
-                for(z = 0; z < l.classes + 4 + 1; ++z){
-                    int i1 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + i;
-                    int i2 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + (l.w - i - 1);
-                    float swap = flip[i1];
-                    flip[i1] = flip[i2];
-                    flip[i2] = swap;
-                    if(z == 0){
-                        flip[i1] = -flip[i1];
-                        flip[i2] = -flip[i2];
-                    }
-                }
-            }
-        }
-    }
-    for(i = 0; i < l.outputs; ++i){
-        l.output[i] = (l.output[i] + flip[i])/2.;
-    }
-}
+// void avg_flipped_yolo(layer l)
+// {
+//     int i,j,n,z;
+//     float *flip = l.output + l.outputs;
+//     for (j = 0; j < l.h; ++j) {
+//         for (i = 0; i < l.w/2; ++i) {
+//             for (n = 0; n < l.n; ++n) {
+//                 for(z = 0; z < l.classes + 4 + 1; ++z){
+//                     int i1 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + i;
+//                     int i2 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + (l.w - i - 1);
+//                     float swap = flip[i1];
+//                     flip[i1] = flip[i2];
+//                     flip[i2] = swap;
+//                     if(z == 0){
+//                         flip[i1] = -flip[i1];
+//                         flip[i2] = -flip[i2];
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     for(i = 0; i < l.outputs; ++i){
+//         l.output[i] = (l.output[i] + flip[i])/2.;
+//     }
+// }
 
 int get_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets, int letter)
 {
@@ -1122,105 +1122,105 @@ int get_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh,
     return count;
 }
 
-int get_yolo_detections_batch(layer l, int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets, int letter, int batch)
-{
-    int i,j,n;
-    float *predictions = l.output;
-    //if (l.batch == 2) avg_flipped_yolo(l);
-    int count = 0;
-    for (i = 0; i < l.w*l.h; ++i){
-        int row = i / l.w;
-        int col = i % l.w;
-        for(n = 0; n < l.n; ++n){
-            int obj_index  = entry_index(l, batch, n*l.w*l.h + i, 4);
-            float objectness = predictions[obj_index];
-            //if(objectness <= thresh) continue;    // incorrect behavior for Nan values
-            if (objectness > thresh) {
-                //printf("\n objectness = %f, thresh = %f, i = %d, n = %d \n", objectness, thresh, i, n);
-                int box_index = entry_index(l, batch, n*l.w*l.h + i, 0);
-                dets[count].bbox = get_yolo_box(predictions, l.biases, l.mask[n], box_index, col, row, l.w, l.h, netw, neth, l.w*l.h, l.new_coords);
-                dets[count].objectness = objectness;
-                dets[count].classes = l.classes;
-                if (l.embedding_output) {
-                    get_embedding(l.embedding_output, l.w, l.h, l.n*l.embedding_size, l.embedding_size, col, row, n, batch, dets[count].embeddings);
-                }
+// int get_yolo_detections_batch(layer l, int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets, int letter, int batch)
+// {
+//     int i,j,n;
+//     float *predictions = l.output;
+//     //if (l.batch == 2) avg_flipped_yolo(l);
+//     int count = 0;
+//     for (i = 0; i < l.w*l.h; ++i){
+//         int row = i / l.w;
+//         int col = i % l.w;
+//         for(n = 0; n < l.n; ++n){
+//             int obj_index  = entry_index(l, batch, n*l.w*l.h + i, 4);
+//             float objectness = predictions[obj_index];
+//             //if(objectness <= thresh) continue;    // incorrect behavior for Nan values
+//             if (objectness > thresh) {
+//                 //printf("\n objectness = %f, thresh = %f, i = %d, n = %d \n", objectness, thresh, i, n);
+//                 int box_index = entry_index(l, batch, n*l.w*l.h + i, 0);
+//                 dets[count].bbox = get_yolo_box(predictions, l.biases, l.mask[n], box_index, col, row, l.w, l.h, netw, neth, l.w*l.h, l.new_coords);
+//                 dets[count].objectness = objectness;
+//                 dets[count].classes = l.classes;
+//                 if (l.embedding_output) {
+//                     get_embedding(l.embedding_output, l.w, l.h, l.n*l.embedding_size, l.embedding_size, col, row, n, batch, dets[count].embeddings);
+//                 }
 
-                for (j = 0; j < l.classes; ++j) {
-                    int class_index = entry_index(l, batch, n*l.w*l.h + i, 4 + 1 + j);
-                    float prob = objectness*predictions[class_index];
-                    dets[count].prob[j] = (prob > thresh) ? prob : 0;
-                }
-                ++count;
-            }
-        }
-    }
-    correct_yolo_boxes(dets, count, w, h, netw, neth, relative, letter);
-    return count;
-}
+//                 for (j = 0; j < l.classes; ++j) {
+//                     int class_index = entry_index(l, batch, n*l.w*l.h + i, 4 + 1 + j);
+//                     float prob = objectness*predictions[class_index];
+//                     dets[count].prob[j] = (prob > thresh) ? prob : 0;
+//                 }
+//                 ++count;
+//             }
+//         }
+//     }
+//     correct_yolo_boxes(dets, count, w, h, netw, neth, relative, letter);
+//     return count;
+// }
 
-#ifdef GPU
+// #ifdef GPU
 
-void forward_yolo_layer_gpu(const layer l, network_state state)
-{
-    if (l.embedding_output) {
-        layer le = state.net.layers[l.embedding_layer_id];
-        cuda_pull_array_async(le.output_gpu, l.embedding_output, le.batch*le.outputs);
-    }
+// void forward_yolo_layer_gpu(const layer l, network_state state)
+// {
+//     if (l.embedding_output) {
+//         layer le = state.net.layers[l.embedding_layer_id];
+//         cuda_pull_array_async(le.output_gpu, l.embedding_output, le.batch*le.outputs);
+//     }
 
-    //copy_ongpu(l.batch*l.inputs, state.input, 1, l.output_gpu, 1);
-    simple_copy_ongpu(l.batch*l.inputs, state.input, l.output_gpu);
-    int b, n;
-    for (b = 0; b < l.batch; ++b){
-        for(n = 0; n < l.n; ++n){
-            int bbox_index = entry_index(l, b, n*l.w*l.h, 0);
-            // y = 1./(1. + exp(-x))
-            // x = ln(y/(1-y))  // ln - natural logarithm (base = e)
-            // if(y->1) x -> inf
-            // if(y->0) x -> -inf
-            if (l.new_coords) {
-                //activate_array_ongpu(l.output_gpu + bbox_index, 4 * l.w*l.h, LOGISTIC);    // x,y,w,h
-            }
-            else {
-                activate_array_ongpu(l.output_gpu + bbox_index, 2 * l.w*l.h, LOGISTIC);    // x,y
+//     //copy_ongpu(l.batch*l.inputs, state.input, 1, l.output_gpu, 1);
+//     simple_copy_ongpu(l.batch*l.inputs, state.input, l.output_gpu);
+//     int b, n;
+//     for (b = 0; b < l.batch; ++b){
+//         for(n = 0; n < l.n; ++n){
+//             int bbox_index = entry_index(l, b, n*l.w*l.h, 0);
+//             // y = 1./(1. + exp(-x))
+//             // x = ln(y/(1-y))  // ln - natural logarithm (base = e)
+//             // if(y->1) x -> inf
+//             // if(y->0) x -> -inf
+//             if (l.new_coords) {
+//                 //activate_array_ongpu(l.output_gpu + bbox_index, 4 * l.w*l.h, LOGISTIC);    // x,y,w,h
+//             }
+//             else {
+//                 activate_array_ongpu(l.output_gpu + bbox_index, 2 * l.w*l.h, LOGISTIC);    // x,y
 
-                int obj_index = entry_index(l, b, n*l.w*l.h, 4);
-                activate_array_ongpu(l.output_gpu + obj_index, (1 + l.classes)*l.w*l.h, LOGISTIC); // classes and objectness
-            }
-            if (l.scale_x_y != 1) scal_add_ongpu(2 * l.w*l.h, l.scale_x_y, -0.5*(l.scale_x_y - 1), l.output_gpu + bbox_index, 1);      // scale x,y
-        }
-    }
-    if(!state.train || l.onlyforward){
-        //cuda_pull_array(l.output_gpu, l.output, l.batch*l.outputs);
-        if (l.mean_alpha && l.output_avg_gpu) mean_array_gpu(l.output_gpu, l.batch*l.outputs, l.mean_alpha, l.output_avg_gpu);
-        cuda_pull_array_async(l.output_gpu, l.output, l.batch*l.outputs);
-        CHECK_CUDA(cudaPeekAtLastError());
-        return;
-    }
+//                 int obj_index = entry_index(l, b, n*l.w*l.h, 4);
+//                 activate_array_ongpu(l.output_gpu + obj_index, (1 + l.classes)*l.w*l.h, LOGISTIC); // classes and objectness
+//             }
+//             if (l.scale_x_y != 1) scal_add_ongpu(2 * l.w*l.h, l.scale_x_y, -0.5*(l.scale_x_y - 1), l.output_gpu + bbox_index, 1);      // scale x,y
+//         }
+//     }
+//     if(!state.train || l.onlyforward){
+//         //cuda_pull_array(l.output_gpu, l.output, l.batch*l.outputs);
+//         if (l.mean_alpha && l.output_avg_gpu) mean_array_gpu(l.output_gpu, l.batch*l.outputs, l.mean_alpha, l.output_avg_gpu);
+//         cuda_pull_array_async(l.output_gpu, l.output, l.batch*l.outputs);
+//         CHECK_CUDA(cudaPeekAtLastError());
+//         return;
+//     }
 
-    float *in_cpu = (float *)xcalloc(l.batch*l.inputs, sizeof(float));
-    cuda_pull_array(l.output_gpu, l.output, l.batch*l.outputs);
-    memcpy(in_cpu, l.output, l.batch*l.outputs*sizeof(float));
-    float *truth_cpu = 0;
-    if (state.truth) {
-        int num_truth = l.batch*l.truths;
-        truth_cpu = (float *)xcalloc(num_truth, sizeof(float));
-        cuda_pull_array(state.truth, truth_cpu, num_truth);
-    }
-    network_state cpu_state = state;
-    cpu_state.net = state.net;
-    cpu_state.index = state.index;
-    cpu_state.train = state.train;
-    cpu_state.truth = truth_cpu;
-    cpu_state.input = in_cpu;
-    forward_yolo_layer(l, cpu_state);
-    //forward_yolo_layer(l, state);
-    cuda_push_array(l.delta_gpu, l.delta, l.batch*l.outputs);
-    free(in_cpu);
-    if (cpu_state.truth) free(cpu_state.truth);
-}
+//     float *in_cpu = (float *)xcalloc(l.batch*l.inputs, sizeof(float));
+//     cuda_pull_array(l.output_gpu, l.output, l.batch*l.outputs);
+//     memcpy(in_cpu, l.output, l.batch*l.outputs*sizeof(float));
+//     float *truth_cpu = 0;
+//     if (state.truth) {
+//         int num_truth = l.batch*l.truths;
+//         truth_cpu = (float *)xcalloc(num_truth, sizeof(float));
+//         cuda_pull_array(state.truth, truth_cpu, num_truth);
+//     }
+//     network_state cpu_state = state;
+//     cpu_state.net = state.net;
+//     cpu_state.index = state.index;
+//     cpu_state.train = state.train;
+//     cpu_state.truth = truth_cpu;
+//     cpu_state.input = in_cpu;
+//     forward_yolo_layer(l, cpu_state);
+//     //forward_yolo_layer(l, state);
+//     cuda_push_array(l.delta_gpu, l.delta, l.batch*l.outputs);
+//     free(in_cpu);
+//     if (cpu_state.truth) free(cpu_state.truth);
+// }
 
-void backward_yolo_layer_gpu(const layer l, network_state state)
-{
-    axpy_ongpu(l.batch*l.inputs, state.net.loss_scale * l.delta_normalizer, l.delta_gpu, 1, state.delta, 1);
-}
-#endif
+// void backward_yolo_layer_gpu(const layer l, network_state state)
+// {
+//     axpy_ongpu(l.batch*l.inputs, state.net.loss_scale * l.delta_normalizer, l.delta_gpu, 1, state.delta, 1);
+// }
+// #endif

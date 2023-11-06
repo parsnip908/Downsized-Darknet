@@ -2,7 +2,7 @@
 #define IMAGE_OPENCV_H
 
 #include "image.h"
-#include "matrix.h"
+// #include "matrix.h"
 
 #ifdef __cplusplus
 extern "C" {
