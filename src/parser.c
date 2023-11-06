@@ -1426,7 +1426,7 @@ network parse_network_cfg_custom(char *filename, int batch, int time_steps)
         layer l = { (LAYER_TYPE)0 };
         LAYER_TYPE lt = string_to_layer_type(s->type);
         if(lt == CONVOLUTIONAL){
-            printf("Parsing conv.\n");
+            // printf("Parsing conv.\n");
             l = parse_convolutional(options, params);
         }
         // else if(lt == LOCAL){
@@ -1457,7 +1457,7 @@ network parse_network_cfg_custom(char *filename, int batch, int time_steps)
         //     l.keep_delta_gpu = 1;
         // }
         else if (lt == YOLO) {
-            printf("parsing yolo\n");
+            // printf("parsing yolo\n");
             l = parse_yolo(options, params);
             l.keep_delta_gpu = 1;
         }
