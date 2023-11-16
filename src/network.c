@@ -22,7 +22,7 @@
 // #include "detection_layer.h"
 // #include "region_layer.h"
 // #include "normalization_layer.h"
-#include "batchnorm_layer.h"
+// #include "batchnorm_layer.h"
 #include "maxpool_layer.h"
 // #include "reorg_layer.h"
 // #include "reorg_old_layer.h"

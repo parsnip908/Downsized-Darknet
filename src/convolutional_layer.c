@@ -1,6 +1,6 @@
 #include "convolutional_layer.h"
 #include "utils.h"
-#include "batchnorm_layer.h"
+// #include "batchnorm_layer.h"
 #include "im2col.h"
 #include "col2im.h"
 #include "blas.h"
