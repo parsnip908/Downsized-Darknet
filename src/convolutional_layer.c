@@ -1072,7 +1072,6 @@ void bit_to_float(unsigned char *src, float *dst, size_t size, size_t filters, f
         else dst[i] = -mean_val;
     }
 }
-*/
 
 void binary_align_weights(convolutional_layer *l)
 {
@@ -1182,7 +1181,6 @@ void binary_align_weights(convolutional_layer *l)
     free(align_weights);
 }
 
-/*
 binary transpose
 size_t binary_transpose_align_input(int k, int n, float *b, char **t_bit_input, size_t ldb_align, int bit_align)
 {
@@ -1251,69 +1249,69 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
             //gemm_nn_custom(m, n, k, 1, a, k, b, n, c, n);
             if (l.xnor && l.align_bit_weights && !state.train && l.stride_x == l.stride_y)
             {
-    //             memset(b, 0, l.bit_align*l.size*l.size*l.c * sizeof(float));
+                // memset(b, 0, l.bit_align*l.size*l.size*l.c * sizeof(float));
 
                 // if (l.c % 32 == 0)
                 // {
-    //                 //printf(" l.index = %d - new XNOR \n", l.index);
+                //     //printf(" l.index = %d - new XNOR \n", l.index);
 
-    //                 int ldb_align = l.lda_align;
-    //                 size_t new_ldb = k + (ldb_align - k%ldb_align); // (k / 8 + 1) * 8;
-    //                 //size_t t_intput_size = new_ldb * l.bit_align;// n;
-    //                 //size_t t_bit_input_size = t_intput_size / 8;// +1;
+                //     int ldb_align = l.lda_align;
+                //     size_t new_ldb = k + (ldb_align - k%ldb_align); // (k / 8 + 1) * 8;
+                //     //size_t t_intput_size = new_ldb * l.bit_align;// n;
+                //     //size_t t_bit_input_size = t_intput_size / 8;// +1;
 
-    //                 int re_packed_input_size = l.c * l.w * l.h;
-    //                 memset(state.workspace, 0, re_packed_input_size * sizeof(float));
+                //     int re_packed_input_size = l.c * l.w * l.h;
+                //     memset(state.workspace, 0, re_packed_input_size * sizeof(float));
 
-    //                 const size_t new_c = l.c / 32;
-    //                 size_t in_re_packed_input_size = new_c * l.w * l.h + 1;
-    //                 memset(l.bin_re_packed_input, 0, in_re_packed_input_size * sizeof(uint32_t));
+                //     const size_t new_c = l.c / 32;
+                //     size_t in_re_packed_input_size = new_c * l.w * l.h + 1;
+                //     memset(l.bin_re_packed_input, 0, in_re_packed_input_size * sizeof(uint32_t));
 
-    //                 //float *re_packed_input = calloc(l.c * l.w * l.h, sizeof(float));
-    //                 //uint32_t *bin_re_packed_input = calloc(new_c * l.w * l.h + 1, sizeof(uint32_t));
+                //     //float *re_packed_input = calloc(l.c * l.w * l.h, sizeof(float));
+                //     //uint32_t *bin_re_packed_input = calloc(new_c * l.w * l.h + 1, sizeof(uint32_t));
 
-    //                 // float32x4 by channel (as in cuDNN)
-    //                 repack_input(state.input, state.workspace, l.w, l.h, l.c);
+                //     // float32x4 by channel (as in cuDNN)
+                //     repack_input(state.input, state.workspace, l.w, l.h, l.c);
 
-    //                 // 32 x floats -> 1 x uint32_t
-    //                 float_to_bit(state.workspace, (unsigned char *)l.bin_re_packed_input, l.c * l.w * l.h);
+                //     // 32 x floats -> 1 x uint32_t
+                //     float_to_bit(state.workspace, (unsigned char *)l.bin_re_packed_input, l.c * l.w * l.h);
 
-    //                 //free(re_packed_input);
+                //     //free(re_packed_input);
 
-    //                 // slow - convolution the packed inputs and weights: float x 32 by channel (as in cuDNN)
-    //                 //convolution_repacked((uint32_t *)bin_re_packed_input, (uint32_t *)l.align_bit_weights, l.output,
-    //                 //    l.w, l.h, l.c, l.n, l.size, l.pad, l.new_lda, l.mean_arr);
+                //     // slow - convolution the packed inputs and weights: float x 32 by channel (as in cuDNN)
+                //     //convolution_repacked((uint32_t *)bin_re_packed_input, (uint32_t *)l.align_bit_weights, l.output,
+                //     //    l.w, l.h, l.c, l.n, l.size, l.pad, l.new_lda, l.mean_arr);
 
-    //                 // // then exit from if()
+                //     // // then exit from if()
 
 
-    //                 im2col_cpu_custom((float *)l.bin_re_packed_input, new_c, l.h, l.w, l.size, l.stride, l.pad, state.workspace);
-    //                 //im2col_cpu((float *)bin_re_packed_input, new_c, l.h, l.w, l.size, l.stride, l.pad, b);
+                //     im2col_cpu_custom((float *)l.bin_re_packed_input, new_c, l.h, l.w, l.size, l.stride, l.pad, state.workspace);
+                //     //im2col_cpu((float *)bin_re_packed_input, new_c, l.h, l.w, l.size, l.stride, l.pad, b);
 
-    //                 //free(bin_re_packed_input);
+                //     //free(bin_re_packed_input);
 
-    //                 int new_k = l.size*l.size*l.c / 32;
+                //     int new_k = l.size*l.size*l.c / 32;
 
-    //                 // good for (l.c == 64)
-    //                 //gemm_nn_bin_32bit_packed(m, n, new_k, 1,
-    //                 //    l.align_bit_weights, l.new_lda/32,
-    //                 //    b, n,
-    //                 //    c, n, l.mean_arr);
+                //     // good for (l.c == 64)
+                //     //gemm_nn_bin_32bit_packed(m, n, new_k, 1,
+                //     //    l.align_bit_weights, l.new_lda/32,
+                //     //    b, n,
+                //     //    c, n, l.mean_arr);
 
-    // // // then exit from if()
+                //     // // then exit from if()
 
-    //                 transpose_uint32((uint32_t *)state.workspace, (uint32_t*)l.t_bit_input, new_k, n, n, new_ldb);
+                //     transpose_uint32((uint32_t *)state.workspace, (uint32_t*)l.t_bit_input, new_k, n, n, new_ldb);
 
-    //                 // the main GEMM function
-    //                 gemm_nn_custom_bin_mean_transposed(m, n, k, 1, (unsigned char*)l.align_bit_weights, new_ldb, (unsigned char*)l.t_bit_input, new_ldb, c, n, l.mean_arr);
+                //     // the main GEMM function
+                //     gemm_nn_custom_bin_mean_transposed(m, n, k, 1, (unsigned char*)l.align_bit_weights, new_ldb, (unsigned char*)l.t_bit_input, new_ldb, c, n, l.mean_arr);
 
-    //                 // // alternative GEMM
-    //                 //gemm_nn_bin_transposed_32bit_packed(m, n, new_k, 1,
-    //                 //    l.align_bit_weights, l.new_lda/32,
-    //                 //    t_bit_input, new_ldb / 32,
-    //                 //    c, n, l.mean_arr);
+                //     // alternative GEMM
+                //     gemm_nn_bin_transposed_32bit_packed(m, n, new_k, 1,
+                //        l.align_bit_weights, l.new_lda/32,
+                //        t_bit_input, new_ldb / 32,
+                //        c, n, l.mean_arr);
 
-    //                 //free(t_bit_input);
+                //     free(t_bit_input);
 
                 // }
                 // else
@@ -1370,7 +1368,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
                 // else if (l.activation == NORM_CHAN_SOFTMAX_MAXVAL) activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 1);
                 // else activate_array_cpu_custom(l.output, m*n*l.batch, l.activation);
                 // return;
-                printf("Conv layer forward dead code\n");
+                printf("Conv layer forward dead code reached\n");
                 exit(1);
             }
             else {
@@ -1413,7 +1411,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     //     forward_batchnorm_layer(l, state);
     // }
     // else {
-        add_bias(l.output, l.biases, 1, l.n, out_h*out_w);
+    add_bias(l.output, l.biases, 1, l.n, out_h*out_w);
     // }
 
     //activate_array(l.output, m*n*l.batch, l.activation);
@@ -1424,8 +1422,8 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     // else if (l.activation == NORM_CHAN_SOFTMAX) activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 0);
     // else if (l.activation == NORM_CHAN_SOFTMAX_MAXVAL) activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 1);
     // else activate_array_cpu_custom(l.output, l.outputs*l.batch, l.activation);
-    if(l.activation != LINEAR)
-        activate_array_cpu_custom(l.output, l.outputs, l.activation);
+
+    activate_array_cpu_custom(l.output, l.outputs, l.activation);
 
     // if(l.binary || l.xnor) swap_binary(&l);
 

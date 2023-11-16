@@ -2350,12 +2350,12 @@ void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
     else if (a == LEAKY)
     {
         for (i = 0; i < n; ++i) {
-            x[i] = (x[i]>0) ? x[i] : .1*x[i];
+            x[i] = (x[i]>0) ? x[i] : 0.1f*x[i];
         }
     }
     else 
     {
-        printf("Unknown activation\n");
+        printf("Unknown activation %d\n", a);
         exit(1);
         // for (i = 0; i < n; ++i) {
         //     x[i] = activate(x[i], a);
@@ -2363,6 +2363,7 @@ void activate_array_cpu_custom(float *x, const int n, const ACTIVATION a)
     }
 }
 
+/*
 void float_to_bit(float *src, unsigned char *dst, size_t size)
 {
     size_t dst_size = size / 8 + 1;
@@ -2393,7 +2394,6 @@ void float_to_bit(float *src, unsigned char *dst, size_t size)
     free(byte_arr);
 }
 
-/*
 static inline void transpose_scalar_block(float *A, float *B, const int lda, const int ldb, const int block_size)
 {
     int i;
@@ -2450,12 +2450,12 @@ void forward_maxpool_layer_avx(float *src, float *dst, int *indexes, int size, i
                             int valid = (cur_h >= 0 && cur_h < h &&
                                 cur_w >= 0 && cur_w < w);
                             float val = (valid != 0) ? src[index] : -FLT_MAX;
-                            max_i = (val > max) ? index : max_i;
+                            // max_i = (val > max) ? index : max_i;
                             max = (val > max) ? val : max;
                         }
                     }
                     dst[out_index] = max;
-                    if (indexes) indexes[out_index] = max_i;
+                    // if (indexes) indexes[out_index] = max_i;
                 }
             }
         }

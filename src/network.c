@@ -1412,6 +1412,7 @@ void calculate_binary_weights(network net)
         if (l->type == CONVOLUTIONAL) {
             //printf(" Merges Convolutional-%d and batch_norm \n", j);
 
+            /*
             if (l->xnor) {
                 //printf("\n %d \n", j);
                 //l->lda_align = 256; // 256bit for AVX2    // set in make_convolutional_layer()
@@ -1438,6 +1439,7 @@ void calculate_binary_weights(network net)
                 }
 #endif  // GPU
             }
+            */
         }
     }
     //printf("\n calculate_binary_weights Done! \n");

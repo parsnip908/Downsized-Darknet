@@ -115,12 +115,14 @@ maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int s
     }
     l.output = (float*)xcalloc(output_size, sizeof(float));
     if (avgpool) {
-        l.forward = forward_local_avgpool_layer;
-        l.backward = backward_local_avgpool_layer;
+        printf("LOCAL_AVGPOOL layer??\n");
+        exit(1);
+        // l.forward = forward_local_avgpool_layer;
+        // l.backward = backward_local_avgpool_layer;
     }
     else {
         l.forward = forward_maxpool_layer;
-        l.backward = backward_maxpool_layer;
+        l.backward = NULL;//backward_maxpool_layer;
     }
 #ifdef GPU
     if (avgpool) {
@@ -302,12 +304,12 @@ void forward_maxpool_layer(const maxpool_layer l, network_state state)
                                 int valid = (cur_h >= 0 && cur_h < l.h &&
                                     cur_w >= 0 && cur_w < l.w);
                                 float val = (valid != 0) ? state.input[index] : -FLT_MAX;
-                                max_i = (val > max) ? index : max_i;
+                                // max_i = (val > max) ? index : max_i;
                                 max = (val > max) ? val : max;
                             }
                         }
                         l.output[out_index] = max;
-                        if (l.indexes) l.indexes[out_index] = max_i;
+                        // if (l.indexes) l.indexes[out_index] = max_i;
                     }
                 }
             }
@@ -326,6 +328,7 @@ void forward_maxpool_layer(const maxpool_layer l, network_state state)
     }
 }
 
+/*
 void backward_maxpool_layer(const maxpool_layer l, network_state state)
 {
     int i;
@@ -338,7 +341,6 @@ void backward_maxpool_layer(const maxpool_layer l, network_state state)
         state.delta[index] += l.delta[i];
     }
 }
-
 
 void forward_local_avgpool_layer(const maxpool_layer l, network_state state)
 {
@@ -412,3 +414,4 @@ void backward_local_avgpool_layer(const maxpool_layer l, network_state state)
     }
 
 }
+*/
