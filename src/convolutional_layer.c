@@ -987,7 +987,6 @@ void set_specified_workspace_limit(convolutional_layer *l, size_t workspace_size
     //printf("Set specified workspace limit for cuDNN: %zu, available: %zu, workspace = %zu \n", workspace_size_limit, free_byte, l->workspace_size);
 #endif  // CUDNN
 }
-*/
 
 void add_bias(float *output, float *biases, int batch, int n, int size)
 {
@@ -1023,7 +1022,6 @@ void backward_bias(float *bias_updates, float *delta, int batch, int n, int size
     }
 }
 
-/*
 void gemm_nn_custom(int M, int N, int K, float ALPHA,
     float *A, int lda,
     float *B, int ldb,
@@ -1207,7 +1205,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
 {
     int out_h = convolutional_out_height(l);
     int out_w = convolutional_out_width(l);
-    int i, j;
+    int i = 0, j = 0;
 
     fill_cpu(l.outputs*l.batch, 0, l.output, 1);
 
@@ -1226,7 +1224,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     int n = out_h*out_w;
     fixed_t* A_fixed = (fixed_t *)malloc(m * k * sizeof(fixed_t));
     fixed_t* B_fixed = (fixed_t *)malloc(n * k * sizeof(fixed_t));
-    fixed_t* C_fixed = (fixed_t *)calloc(m * n , sizeof(fixed_t));
+    fixed_t* C_fixed = (fixed_t *) l.output;
 
     static int u = 0;
     u++;
@@ -1237,10 +1235,10 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
         exit(1); 
     }
 
-    for(i = 0; i < 1; ++i)
-    {
-        for (j = 0; j < 1; ++j)
-        {
+    // for(i = 0; i < 1; ++i)
+    // {
+    //     for (j = 0; j < 1; ++j)
+    //     {
             float *a = l.weights +j*l.nweights;
             float *b = state.workspace;
             float *c = l.output +(i + j)*n*m;
@@ -1391,28 +1389,35 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
                 }
 
                 arr_float_to_fixed(a, A_fixed, m * k);
-                arr_float_to_fixed(b, B_fixed, n * k);
+                // arr_float_to_fixed(b, B_fixed, n * k);
 
-                gemm_fixed(m, n, k, A_fixed, B_fixed, C_fixed);
+                gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
 
-                arr_fixed_to_float(C_fixed, c, m * n);
 
                 // bit-count to float
             }
             //c += n*m;
             //state.input += l.c*l.h*l.w;
-        }
-    }
+    //     }
+    // }
     free(A_fixed);
     free(B_fixed);
-    free(C_fixed);
+    // free(C_fixed);
 
     // if(l.batch_normalize){
     //     forward_batchnorm_layer(l, state);
     // }
     // else {
-    add_bias(l.output, l.biases, 1, l.n, out_h*out_w);
+    //     add_bias(l.output, l.biases, 1, l.n, out_h*out_w);
     // }
+
+    //add bias
+    for(i = 0; i < m; ++i)
+    {
+        fixed_t bias = float_to_fixed(l.biases[i]);
+        for(j = 0; j < n; ++j)
+            C_fixed[i*n + j] += bias;
+    }
 
     //activate_array(l.output, m*n*l.batch, l.activation);
     // if (l.activation == SWISH) activate_array_swish(l.output, l.outputs*l.batch, l.activation_input, l.output);
@@ -1423,7 +1428,17 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     // else if (l.activation == NORM_CHAN_SOFTMAX_MAXVAL) activate_array_normalize_channels_softmax(l.output, l.outputs*l.batch, l.batch, l.out_c, l.out_w*l.out_h, l.output, 1);
     // else activate_array_cpu_custom(l.output, l.outputs*l.batch, l.activation);
 
-    activate_array_cpu_custom(l.output, l.outputs, l.activation);
+    if (l.activation == LEAKY)
+        for (i = 0; i < m * n; ++i)
+            C_fixed[i] = (C_fixed[i]>0) ? C_fixed[i] : fixed_mul(float_to_fixed(0.1f), C_fixed[i]);
+
+    else if (l.activation != LINEAR)
+    {
+        printf("Unknown activation %d\n", l.activation);
+        exit(1);
+    }
+    
+    // arr_fixed_to_float(C_fixed, l.output, m * n);
 
     // if(l.binary || l.xnor) swap_binary(&l);
 

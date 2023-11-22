@@ -18,7 +18,7 @@ inline fixed_t fixed_mul(fixed_t a, fixed_t b)
     // return (fixed_t) (((int64_t)a * (int64_t)b) >> QBITS);   // QBITS <= INTSIZE-8    exact
     // return (a * b) >> QBITS;                                 // 2*QBITS <= INTSIZE-8  exact
     // return ((a>>8) * (b>>8)) >> 4;                           // QBITS == 20           approx
-    return (a>>(QBITS/2)) * (b>>(QBITS/2));                     // QBITS <= INTSIZE-8    approx
+    return (a>>(QBITS/2)) * (b>>(QBITS/2));                  // QBITS <= INTSIZE-8    approx
 }
 
 // Convert fixed_t number back to float

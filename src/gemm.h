@@ -85,7 +85,7 @@ void gemm_nn_bin_transposed_32bit_packed(int M, int N, int K, float ALPHA,
     float *C, int ldc, float *mean_arr);
 
 
-void forward_maxpool_layer_avx(float *src, float *dst, int *indexes, int size, int w, int h, int out_w, int out_h, int c,
+void forward_maxpool_layer_avx(fixed_t *src, fixed_t *dst, int *indexes, int size, int w, int h, int out_w, int out_h, int c,
     int pad, int stride, int batch);
 
 

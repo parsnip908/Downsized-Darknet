@@ -246,6 +246,9 @@ void forward_maxpool_layer(const maxpool_layer l, network_state state)
 {
     if (l.maxpool_depth)
     {
+        printf("maxpool dead code 1.\n");
+        exit(1);
+        /*
         int b, i, j, k, g;
         for (b = 0; b < l.batch; ++b) {
             #pragma omp parallel for
@@ -272,14 +275,19 @@ void forward_maxpool_layer(const maxpool_layer l, network_state state)
             }
         }
         return;
+        */
     }
 
 
     if (!state.train && l.stride_x == l.stride_y) {
-        forward_maxpool_layer_avx(state.input, l.output, l.indexes, l.size, l.w, l.h, l.out_w, l.out_h, l.c, l.pad, l.stride, l.batch);
+        forward_maxpool_layer_avx((fixed_t*) state.input, (fixed_t*) l.output, l.indexes, l.size, l.w, l.h, l.out_w, l.out_h, l.c, l.pad, l.stride, l.batch);
     }
     else
     {
+        printf("maxpool dead code.\n");
+        exit(1);
+
+        /*
 
         int b, i, j, k, m, n;
         int w_offset = -l.pad / 2;
@@ -314,8 +322,10 @@ void forward_maxpool_layer(const maxpool_layer l, network_state state)
                 }
             }
         }
+        */
     }
 
+    /*
     if (l.antialiasing) {
         network_state s = { 0 };
         s.train = state.train;
@@ -326,6 +336,7 @@ void forward_maxpool_layer(const maxpool_layer l, network_state state)
         //simple_copy_ongpu(l.outputs*l.batch, l.output, l.input_antialiasing);
         memcpy(l.output, l.input_layer->output, l.input_layer->outputs * l.input_layer->batch * sizeof(float));
     }
+    */
 }
 
 /*

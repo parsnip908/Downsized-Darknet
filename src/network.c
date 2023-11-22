@@ -1,4 +1,5 @@
 #include "darknet.h"
+#include "fixed.h"
 
 #include <stdio.h>
 #include <time.h>
@@ -270,15 +271,25 @@ void forward_network(network net, network_state state)
 {
     state.workspace = net.workspace;
     int i;
+    arr_float_to_fixed(state.input, state.input, net.layers[0].inputs);
     for(i = 0; i < net.n; ++i){
         state.index = i;
         layer l = net.layers[i];
         if(l.delta && state.train && l.train){
             scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
         }
-        //double time = get_time_point();
+        double time = get_time_point();
+
+        if(l.type == YOLO) 
+        {
+            printf("Yolo ahead\n");
+            arr_fixed_to_float(state.input, state.input, net.layers[i-1].outputs);
+        }
+
         l.forward(l, state);
-        //printf("%d - Predicted in %lf milli-seconds.\n", i, ((double)get_time_point() - time) / 1000);
+
+        printf("%d - Predicted in %lf milli-seconds.\n", i, ((double)get_time_point() - time) / 1000);
+
         state.input = l.output;
 
         /*
