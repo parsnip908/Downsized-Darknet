@@ -282,13 +282,13 @@ void forward_network(network net, network_state state)
 
         if(l.type == YOLO) 
         {
-            printf("Yolo ahead\n");
+            // printf("Yolo ahead\n");
             arr_fixed_to_float(state.input, state.input, net.layers[i-1].outputs);
         }
 
         l.forward(l, state);
 
-        printf("%d - Predicted in %lf milli-seconds.\n", i, ((double)get_time_point() - time) / 1000);
+        // printf("%d - Predicted in %lf milli-seconds.\n", i, ((double)get_time_point() - time) / 1000);
 
         state.input = l.output;
 

@@ -1987,6 +1987,7 @@ void gemm_fixed(int M, int N, int K,
     fixed_t *A, fixed_t *B, fixed_t *C)
 {
     int i, j, k;
+    #pragma omp parallel for
     for (i = 0; i < M; ++i) {
         for (k = 0; k < K; ++k) {
             PUT_IN_REGISTER fixed_t A_PART = A[i * K + k];
@@ -2433,7 +2434,7 @@ void forward_maxpool_layer_avx(fixed_t* src, fixed_t* dst, int *indexes, int siz
     // fixed_t* src = (fixed_t*) src;
     // fixed_t* dst = (fixed_t*) dst;
     int b, k;
-    printf("maxpool: %d %dx%d %dx%d %d %d %d\n", size, w, h, out_w, out_h, c, pad, stride);
+    // printf("maxpool: %d %dx%d %dx%d %d %d %d\n", size, w, h, out_w, out_h, c, pad, stride);
     const int w_offset = -pad / 2;
     const int h_offset = -pad / 2;
     // printf("%d %d\n", w_offset, h_offset);
