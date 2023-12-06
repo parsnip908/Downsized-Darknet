@@ -116,6 +116,22 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
 }
 
+void gemm_B_col_major(int M, int N, int K, 
+    fixed_t *A, fixed_t *B, fixed_t *C)
+{
+    #pragma omp parallel for
+    for(int m = 0; m < M; m++)
+    {
+        for(int n = 0; n < N; n++)
+        {
+            PUT_IN_REGISTER fixed_t sum = 0;
+            for(int k = 0; k < K; k++)
+                sum += fixed_mul(A[m*K + k], B[n*K + k]);
+            C[m*N + n] = sum;
+        }
+    }
+
+}
 
 //--------------------------------------------
 // XNOR bitwise GEMM for binary neural network

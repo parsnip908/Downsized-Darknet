@@ -34,6 +34,11 @@ void im2col_gpu_ext(const float* data_im, const int channels,
     const int dilation_h, const int dilation_w,
     float* data_col);
 
+void im2col_cpu_col_major(const fixed_t* data_im, 
+    const int channels, const int height, const int width, 
+    const int kernel, const int pad,
+    fixed_t* data_col);
+
 void im2col_align_ongpu(float *im,
     int channels, int height, int width,
     int ksize, int stride, int pad, float *data_col, int bit_align);

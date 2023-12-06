@@ -1,4 +1,5 @@
 #include "im2col.h"
+#include "fixed.h"
 #include <stdio.h>
 float im2col_get_pixel(float *im, int height, int width, int channels,
                         int row, int col, int channel, int pad)
@@ -91,3 +92,47 @@ void im2col_cpu_ext(const float* data_im, const int channels,
         }
     }
 }
+
+void im2col_cpu_col_major(const fixed_t* data_im, 
+    const int channels, const int height, const int width, 
+    const int kernel, const int pad,
+    fixed_t* data_col)
+{
+    const int output_h = height + 2*pad - kernel + 1;
+    const int output_w = width  + 2*pad - kernel + 1;
+    const int channel_size = height * width;
+
+    int channel;
+    int kernel_row, kernel_col;
+    int output_row, output_col;
+    int input_row,  input_col;
+
+    for(output_row = 0; output_row < output_h; output_row++)
+    {
+        for(output_col = 0; output_col < output_w; output_col++)
+        {
+            for(channel = 0; channel < channels; channel++)
+            {
+                for(kernel_row = 0; kernel_row < kernel; kernel_row++)
+                {
+                    input_row = output_row + kernel_row - pad;
+                    if (((unsigned) input_row) >= height)
+                        for(kernel_col = 0; kernel_col < kernel; kernel_col++)
+                            *(data_col++) = 0;
+                    
+                    else for(kernel_col = 0; kernel_col < kernel; kernel_col++)
+                    {
+                        input_col = output_col + kernel_col - pad;
+                        if (((unsigned) input_col) >= width)
+                            *(data_col++) = 0;
+                        else
+                            *(data_col++) = data_im[channel*channel_size + 
+                                                    input_row*width + 
+                                                    input_col];
+                    }
+                }
+            }
+        }
+    }
+}
+

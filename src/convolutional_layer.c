@@ -1371,13 +1371,38 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
             }
             else {
                 //printf(" l.index = %d - FP32 \n", l.index);
+                arr_float_to_fixed(a, A_fixed, m * k);
+
                 float *im = state.input + (i + j)*(l.c)*l.h*l.w;
                 if (l.size == 1 && l.stride == 1 && l.dilation == 1) {
+                    // printf("we here 1\n");
                     b = im;
+                    gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
+                }
+                else if(l.stride == 1 && l.dilation == 1)
+                {
+                    // printf("we here 2\n");
+                    // int static printB = 1;
+                    im2col_cpu_col_major((fixed_t*) im, 
+                        l.c / l.groups,
+                        l.h, l.w, 
+                        l.size, l.pad,
+                        (fixed_t*) b);
+
+                    // if(printB)
+                    // {
+                    //     printB = 0;
+                    //     FILE *myFile = fopen("B_test2", "w");
+                    //     for (i = 0; i < k*n; i++)
+                    //         fprintf(myFile, "%i\n", (int)(b[i] * (1 << 20)));
+                    //     fclose(myFile);
+                    // }
+                    gemm_B_col_major(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
                 }
                 else {
                     //im2col_cpu(im, l.c / l.groups, l.h, l.w, l.size, l.stride, l.pad, b);
 
+                    printf("Error");
                     im2col_cpu_ext(im,   // input
                         l.c,     // input channels
                         l.h, l.w,           // input size (h, w)
@@ -1386,13 +1411,12 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
                         l.stride_y, l.stride_x, // stride (h, w)
                         l.dilation, l.dilation, // dilation (h, w)
                         b);                 // output
+                    gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
                 }
 
-                arr_float_to_fixed(a, A_fixed, m * k);
                 // arr_float_to_fixed(b, B_fixed, n * k);
 
-                gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
-
+                // gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
 
                 // bit-count to float
             }
