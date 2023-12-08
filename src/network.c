@@ -1543,12 +1543,13 @@ network combine_train_valid_networks(network net_train, network net_map)
     return net_combined;
 }
 
+*/
 void free_network_recurrent_state(network net)
 {
     int k;
     for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) free_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+        // if (net.layers[k].type == CONV_LSTM) free_state_conv_lstm(net.layers[k]);
+        // if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
     }
 }
 
@@ -1556,8 +1557,8 @@ void randomize_network_recurrent_state(network net)
 {
     int k;
     for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) randomize_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+        // if (net.layers[k].type == CONV_LSTM) randomize_state_conv_lstm(net.layers[k]);
+        // if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
     }
 }
 
@@ -1566,7 +1567,7 @@ void remember_network_recurrent_state(network net)
 {
     int k;
     for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) remember_state_conv_lstm(net.layers[k]);
+        // if (net.layers[k].type == CONV_LSTM) remember_state_conv_lstm(net.layers[k]);
         //if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
     }
 }
@@ -1575,12 +1576,12 @@ void restore_network_recurrent_state(network net)
 {
     int k;
     for (k = 0; k < net.n; ++k) {
-        if (net.layers[k].type == CONV_LSTM) restore_state_conv_lstm(net.layers[k]);
-        if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
+        // if (net.layers[k].type == CONV_LSTM) restore_state_conv_lstm(net.layers[k]);
+        // if (net.layers[k].type == CRNN) free_state_crnn(net.layers[k]);
     }
 }
 
-
+/*
 int is_ema_initialized(network net)
 {
     int i;
