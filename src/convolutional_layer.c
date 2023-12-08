@@ -1223,7 +1223,7 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
     int k = l.size*l.size*l.c / l.groups;
     int n = out_h*out_w;
     fixed_t* A_fixed = (fixed_t *)malloc(m * k * sizeof(fixed_t));
-    fixed_t* B_fixed = (fixed_t *)malloc(n * k * sizeof(fixed_t));
+    fixed_t* B_fixed = (fixed_t *) state.workspace;
     fixed_t* C_fixed = (fixed_t *) l.output;
 
     static int u = 0;
@@ -1371,13 +1371,40 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
             }
             else {
                 //printf(" l.index = %d - FP32 \n", l.index);
+                int static print = 1;
+                arr_float_to_fixed(a, A_fixed, m * k);
+
                 float *im = state.input + (i + j)*(l.c)*l.h*l.w;
+                fixed_t * im_fixed = (fixed_t *) im;
                 if (l.size == 1 && l.stride == 1 && l.dilation == 1) {
-                    b = im;
+                    // printf("we here 1\n");
+                    im2col_cpu_col_major_k1(im_fixed, l.c, l.h, l.w, B_fixed);
+                    // b = im;
+                    // gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
+                }
+                else if(l.stride == 1 && l.dilation == 1)
+                {
+                    // printf("we here 2\n");
+                    im2col_cpu_col_major_k3(im_fixed, l.c, l.h, l.w, B_fixed);
+                        // l.size, l.pad,
+
+                    // if(printB)
+                    // {
+                    //     printB = 0;
+                    //     FILE *myFile = fopen("A_L1_full.txt", "w");
+                    //     for (i = 0; i < k*m; i++)
+                    //         fprintf(myFile, "%i\n", A_fixed[i]);
+                    //     fclose(myFile);
+                    //     FILE *myFile = fopen("B_L1_22.txt", "w");
+                    //     for (i = 0; i < k*22; i++)
+                    //         fprintf(myFile, "%i\n", ((fixed_t *) b)[i]);
+                    //     fclose(myFile);
+                    // }
                 }
                 else {
                     //im2col_cpu(im, l.c / l.groups, l.h, l.w, l.size, l.stride, l.pad, b);
 
+                    printf("Error");
                     im2col_cpu_ext(im,   // input
                         l.c,     // input channels
                         l.h, l.w,           // input size (h, w)
@@ -1386,22 +1413,30 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
                         l.stride_y, l.stride_x, // stride (h, w)
                         l.dilation, l.dilation, // dilation (h, w)
                         b);                 // output
+                    gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
                 }
 
-                arr_float_to_fixed(a, A_fixed, m * k);
                 // arr_float_to_fixed(b, B_fixed, n * k);
 
-                gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
+                gemm_B_col_major_accel(m, n, k, A_fixed, B_fixed, C_fixed);
+                // gemm_fixed(m, n, k, A_fixed, (fixed_t*) b, C_fixed);
+                // if(print)
+                // {
+                //     print = 0;
+                //     FILE *myFile = fopen("C_L1_22.txt", "w");
+                //     for (i = 0; i < m; i++)
+                //         for (j = 0; j < 22; j++)
+                //             fprintf(myFile, "%i\n", C_fixed[i*n+j]);
+                //     fclose(myFile);
+                // }
 
-
-                // bit-count to float
             }
             //c += n*m;
             //state.input += l.c*l.h*l.w;
     //     }
     // }
     free(A_fixed);
-    free(B_fixed);
+    // free(B_fixed);
     // free(C_fixed);
 
     // if(l.batch_normalize){

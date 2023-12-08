@@ -97,6 +97,8 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
 
 void gemm_fixed(int M, int N, int K,
     fixed_t *A, fixed_t *B, fixed_t *C);
+void gemm_B_col_major_cpu(int M, int N, int K,
+    fixed_t *A, fixed_t *B, fixed_t *C);
 
 void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
         float *A, int lda,
