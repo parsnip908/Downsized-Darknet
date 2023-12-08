@@ -116,7 +116,7 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
 }
 
-void gemm_B_col_major(int M, int N, int K, 
+void gemm_B_col_major_cpu(int M, int N, int K, 
     fixed_t *A, fixed_t *B, fixed_t *C)
 {
     #pragma omp parallel for
@@ -132,6 +132,98 @@ void gemm_B_col_major(int M, int N, int K,
     }
 
 }
+
+// actual max: k=4608
+// hardware synth: k = 8192
+
+void gemm_cpu_block(int M, int N, int K, 
+    fixed_t *A, fixed_t *B, fixed_t *C,
+    int m_start, int m_end, 
+    int n_start, int n_end)
+{
+    for(int m = m_start; m < m_end; m++)
+    {
+        for(int n = n_start; n < n_end; n++)
+        {
+            PUT_IN_REGISTER fixed_t sum = 0;
+            for(int k = 0; k < K; k++)
+                sum += fixed_mul(A[m*K + k], B[n*K + k]);
+            C[m*N + n] = sum;
+        }
+    }
+
+}
+
+#define BLOCK_M 8
+#define BLOCK_N 11
+#define K_MAX 4096
+
+void gemm_B_col_major_accel(int M, int N, int K, 
+    fixed_t *A, fixed_t *B, fixed_t *C)
+{
+    int n, m, k;
+    //set K_in to min(K, 4096)
+    uint16_t K_in = K < K_MAX ? K : K_MAX;
+    // TODO: load accel ctrl
+
+    //block B loop
+    for(n = 0; n <= N-BLOCK_N; n += BLOCK_N)
+    {
+        // TODO: load B
+        for(int i = 0; i < BLOCK_N; i++)
+        {
+            // pwrite(fpgaFile, &B[(n+i)*K], K_in, B_BASE + i*BRAMSIZE)
+        }
+        // block A loop
+        for(m = 0; m <= M-BLOCK_M; m += BLOCK_M)
+        {            
+            //load A
+            for(int i = 0; i < BLOCK_M; i++)
+            {
+                // pwrite(fpgaFile, &A[(m+i)*K], K_in, A_BASE + i*BRAMSIZE)
+            }
+            // TODO: all of this
+            //trigger
+                // multiply BLOCK_M x BLOCK_N x K_in block
+            //wait for return
+            //read result to output
+            //reset ctrl
+        }
+    }
+    if(n < N)
+    {
+        gemm_cpu_block(M, N, K, A, B, C, 0, M, n, N);
+    }
+    if(m < M)
+    {
+        gemm_cpu_block(M, N, K, A, B, C, m, M, 0, n);
+    }
+
+    if(K <= K_MAX) return;
+
+    for(k = K_MAX; k <= K; k += K_MAX)
+    {
+        K_in = K-k < K_MAX ? K-k : K_MAX;
+        // TODO: load accel ctrl
+
+        for(n = 0; n <= N-BLOCK_N; n += BLOCK_N)
+        {
+            // TODO: load B
+            for(m = 0; m <= M-BLOCK_M; m += BLOCK_M)
+            {
+                // TODO: all of this
+                //load A
+                //trigger
+                    // multiply BLOCK_M x BLOCK_N x K_in block
+                //wait for return
+                //read result to buffer
+                //add result
+                //reset ctrl
+            }
+        }
+    }
+}
+
 
 //--------------------------------------------
 // XNOR bitwise GEMM for binary neural network

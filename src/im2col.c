@@ -136,3 +136,123 @@ void im2col_cpu_col_major(const fixed_t* data_im,
     }
 }
 
+void im2col_cpu_col_major_k3(const fixed_t* data_im, 
+    const int channels, const int height, const int width, 
+    fixed_t* data_col)
+{
+    const int channel_size = height * width;
+
+    int channel;
+    int kernel_row, kernel_col;
+    int output_row, output_col;
+    int input_row,  input_col;
+
+    for(output_row = 0; output_row < height; output_row++)
+    {
+        for(output_col = 0; output_col < width; output_col++)
+        {
+            for(channel = 0; channel < channels; channel++)
+            {
+                for(kernel_row = 0; kernel_row < 3; kernel_row++)
+                {
+                    input_row = output_row + kernel_row - 1;
+                    if (((unsigned) input_row) >= height)
+                        for(kernel_col = 0; kernel_col < 3; kernel_col++)
+                            *(data_col++) = 0;
+                    
+                    else for(kernel_col = 0; kernel_col < 3; kernel_col++)
+                    {
+                        input_col = output_col + kernel_col - 1;
+                        if (((unsigned) input_col) >= width)
+                            *(data_col++) = 0;
+                        else
+                            *(data_col++) = data_im[channel*channel_size + 
+                                                    input_row*width + 
+                                                    input_col];
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+void im2col_cpu_col_major(const fixed_t* data_im, 
+    const int channels, const int height, const int width, 
+    const int kernel, const int pad,
+    fixed_t* data_col)
+{
+    const int output_h = height;
+    const int output_w = width ;
+    const int channel_size = height * width;
+
+    for(int channel = 0; channel < channels; channel++)
+    {
+        for(int input_row = -1; input_row < height+1; input_row++)
+        {
+            for(int input_col = -1; input_col < width+1; input_col++)
+            {
+                fixed_t data_next;
+                if(((unsigned) input_row) >= height || ((unsigned) input_col) >= width)
+                    data_next = 0;
+                else
+                    data_next = data_im[channel*channel_size + input_row*width + input_col];
+                
+                int num_output_rows, num_output_cols;
+                
+                // if(input_row == -1 || input_row == height)
+                //     num_output_rows = 1;
+                // else if(input_row == 0 || input_row == height-1)
+                //     num_output_rows = 2;
+                // else
+                //     num_output_rows = 3;
+
+                // if(input_col == -1 || input_col == width)
+                //     num_output_cols = 1;
+                // else if(input_col == 0 || input_col == width-1)
+                //     num_output_cols = 2;
+                // else
+                //     num_output_cols = 3;
+
+                int output_row_start = input_row <= 0 ? 1 + input_row : 2;
+                int output_row_end   = get_kernel_end(height, input_row);
+                int output_col_start = input_col <= 0 ? 1 + input_col : 2;
+                int output_col_end   = get_kernel_end(width, input_col);
+
+                for(int kernel_row = kernel_row_start; kernel_row >= kernel_row_end; kernel_row--)
+                {
+                    for(int kernel_col = kernel_col_start; kernel_col >= kernel_col_end; kernel_col--)
+                    {
+
+                    }
+                }
+
+            }
+
+        }
+    }
+
+}
+
+inline int get_kernel_end(int size, int location)
+{
+    if(location == size)
+        return 2;
+    else if(location == size - 1)
+        return 1;
+    else
+        return 0;
+}
+*/
+
+void im2col_cpu_col_major_k1(const fixed_t* data_im, 
+    const int channels, const int height, const int width, 
+    fixed_t* data_col)
+{
+    const int channel_size = height * width;
+
+    for(int row = 0; row < height; row++)
+        for(int col = 0; col < width; col++)
+            for(int channel = 0; channel < channels; channel++)
+                *(data_col++) = data_im[channel*channel_size + row*width + col];
+}

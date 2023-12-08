@@ -39,6 +39,14 @@ void im2col_cpu_col_major(const fixed_t* data_im,
     const int kernel, const int pad,
     fixed_t* data_col);
 
+void im2col_cpu_col_major_k3(const fixed_t* data_im, 
+    const int channels, const int height, const int width, 
+    fixed_t* data_col);
+
+void im2col_cpu_col_major_k1(const fixed_t* data_im, 
+    const int channels, const int height, const int width, 
+    fixed_t* data_col);
+
 void im2col_align_ongpu(float *im,
     int channels, int height, int width,
     int ksize, int stride, int pad, float *data_col, int bit_align);
